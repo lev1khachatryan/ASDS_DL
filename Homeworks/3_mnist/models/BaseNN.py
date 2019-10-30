@@ -329,6 +329,7 @@ class BaseNN:
         self.load_tensors(graph)
         return sess
     
+    # load model and test on test data
     def test_model(self):
         x_test, y_test = self.data_loader.all_test_data_loader()
         x_test = x_test.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
@@ -344,6 +345,7 @@ class BaseNN:
         print('Test Accuracy: ', self.metrics(y_test, y_test_pred_labels[self.model_name]))
         return self.metrics(y_test, y_test_pred_labels[self.model_name])
         
+    # Initialize network from meta file
     def initialize_network(self):
     	filepath = os.path.join(os.getcwd(), self.model_name + '.meta')
     	if os.path.isdir(filepath):

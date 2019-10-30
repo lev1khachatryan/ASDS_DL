@@ -47,7 +47,43 @@ Here we have DataLoader class, which provides data for train/test/validation
 ## 5. BaseNN
 
 BaseNN abstract class is defined here. In this class we have everything we need for training except of ***network*** and ***metrics***
-This two methods should be the only abstract methods (see descriptions of these functions in the next chapter)
+This two methods are abstract (see descriptions in the next chapter)
+
+* ***generate_images*** - takes images as argument and generate new images via rotations, translations, zoom using keras
+
+* ***summary_variable*** - attach summaries to a tensor for TensorBoard visualization
+
+* ***create_network*** - creates whole graph of training:
+
+    * define placeholders for input and labels
+
+    * "compute" prediction of the network
+
+    * "compute" the loss function
+
+    * setup optimizer,
+
+    * setup operation which minimizes loss function
+    
+* ***attach_summary*** - create summary tensors for tensorboard
+
+* ***train_model_helper*** - helper function to train the model
+
+* ***train_model*** - trains the model passing through data num epochs times, does validation after "validation step" steps, save checkpoint after "checkpoint step" steps and display loss after "display step" steps
+
+* ***save_model*** - save tensors/summaries
+
+* ***forward*** - forward prediction of current graph
+
+* ***load_session_from_file*** - load session from file, restore graph, and load tensors
+
+* ***test_model*** - load model and test on test data
+
+* ***initialize_network*** - load model meta info, which contains all parameters if such info exists
+
+* ***network*** - abstract method, see descriptions in the next chapter
+
+* ***metrics*** - abstract method, see descriptions in the next chapter
 
 Something will be changed here soon.
 
