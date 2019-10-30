@@ -88,28 +88,28 @@ class DNN(BaseNN):
 #         tf.reset_default_graph()
 
         # 1.layer: convolution + max pooling
-        self.W_conv1_tf = self.weight_variable([self.s_f_conv1, self.s_f_conv1, 1, self.n_f_conv1], name = 'W_conv1_tf') # (5,5,1,32)
-        self.b_conv1_tf = self.bias_variable([self.n_f_conv1], name = 'b_conv1_tf') # (32)
-        self.h_conv1_tf = tf.nn.relu(self.conv2d(X, self.W_conv1_tf) + self.b_conv1_tf, name = 'h_conv1_tf') # (.,28,28,32)
-        self.h_pool1_tf = self.max_pool_2x2(self.h_conv1_tf, name = 'h_pool1_tf') # (.,14,14,32)
+        self.W_conv1_tf = self.weight_variable([self.s_f_conv1, self.s_f_conv1, 1, self.n_f_conv1], name = 'W_conv1_tf') # (3,3,1,36)
+        self.b_conv1_tf = self.bias_variable([self.n_f_conv1], name = 'b_conv1_tf') # (36)
+        self.h_conv1_tf = tf.nn.relu(self.conv2d(X, self.W_conv1_tf) + self.b_conv1_tf, name = 'h_conv1_tf') # (.,28,28,36)
+        self.h_pool1_tf = self.max_pool_2x2(self.h_conv1_tf, name = 'h_pool1_tf') # (.,14,14,36)
 
         # 2.layer: convolution + max pooling
         self.W_conv2_tf = self.weight_variable([self.s_f_conv2, self.s_f_conv2, self.n_f_conv1, self.n_f_conv2], name = 'W_conv2_tf')
         self.b_conv2_tf = self.bias_variable([self.n_f_conv2], name = 'b_conv2_tf')
-        self.h_conv2_tf = tf.nn.relu(self.conv2d(self.h_pool1_tf, self.W_conv2_tf) + self.b_conv2_tf, name ='h_conv2_tf') #(.,14,14,32)
-        self.h_pool2_tf = self.max_pool_2x2(self.h_conv2_tf, name = 'h_pool2_tf') #(.,7,7,32)
+        self.h_conv2_tf = tf.nn.relu(self.conv2d(self.h_pool1_tf, self.W_conv2_tf) + self.b_conv2_tf, name ='h_conv2_tf') #(.,14,14,36)
+        self.h_pool2_tf = self.max_pool_2x2(self.h_conv2_tf, name = 'h_pool2_tf') #(.,7,7,36)
 
         # 3.layer: convolution + max pooling
         self.W_conv3_tf = self.weight_variable([self.s_f_conv3, self.s_f_conv3, self.n_f_conv2, self.n_f_conv3], name = 'W_conv3_tf')
         self.b_conv3_tf = self.bias_variable([self.n_f_conv3], name = 'b_conv3_tf')
-        self.h_conv3_tf = tf.nn.relu(self.conv2d(self.h_pool2_tf, self.W_conv3_tf) + self.b_conv3_tf, name = 'h_conv3_tf') #(.,7,7,32)
-        self.h_pool3_tf = self.max_pool_2x2(self.h_conv3_tf, name = 'h_pool3_tf') # (.,4,4,32)
+        self.h_conv3_tf = tf.nn.relu(self.conv2d(self.h_pool2_tf, self.W_conv3_tf) + self.b_conv3_tf, name = 'h_conv3_tf') #(.,7,7,36)
+        self.h_pool3_tf = self.max_pool_2x2(self.h_conv3_tf, name = 'h_pool3_tf') # (.,4,4,36)
 
         # 4.layer: fully connected
-        self.W_fc1_tf = self.weight_variable([4*4*self.n_f_conv3,self.n_n_fc1], name = 'W_fc1_tf') # (4*4*32, 1024)
-        self.b_fc1_tf = self.bias_variable([self.n_n_fc1], name = 'b_fc1_tf') # (1024)
-        self.h_pool3_flat_tf = tf.reshape(self.h_pool3_tf, [-1,4*4*self.n_f_conv3], name = 'h_pool3_flat_tf') # (.,1024)
-        self.h_fc1_tf = tf.nn.relu(tf.matmul(self.h_pool3_flat_tf, self.W_fc1_tf) + self.b_fc1_tf, name = 'h_fc1_tf') # (.,1024)
+        self.W_fc1_tf = self.weight_variable([4*4*self.n_f_conv3,self.n_n_fc1], name = 'W_fc1_tf') # (4*4*36, 576)
+        self.b_fc1_tf = self.bias_variable([self.n_n_fc1], name = 'b_fc1_tf') # (576)
+        self.h_pool3_flat_tf = tf.reshape(self.h_pool3_tf, [-1,4*4*self.n_f_conv3], name = 'h_pool3_flat_tf') # (.,576)
+        self.h_fc1_tf = tf.nn.relu(tf.matmul(self.h_pool3_flat_tf, self.W_fc1_tf) + self.b_fc1_tf, name = 'h_fc1_tf') # (.,576)
       
         # add dropout
         self.keep_prob_tf = tf.placeholder(dtype=tf.float32, name = 'keep_prob_tf')
