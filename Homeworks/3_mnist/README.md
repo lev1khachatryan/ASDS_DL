@@ -103,7 +103,6 @@ Here we have DNN class, which inherits from BaseNN class. ***network*** and ***m
 
 * ***network*** - takes an input with shape (batch size; height of image; width of image ; num channels) and gives output with shape (batch size, num classes) using below mentioned architecture.
 
-:-------------------------:
 ![](_assets/nn_1_30-10-2019_01-48-27_train.png)
 
 * ***metrics*** - takes actual and predicted values and computes accuracy
