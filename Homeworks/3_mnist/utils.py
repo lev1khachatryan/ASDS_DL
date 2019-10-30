@@ -3,13 +3,13 @@ import numpy as np
 def create_dir(dir_name, relative_path):
     """
     Create new directory if not exists
-    
+    --------------
     Parameters:
         dir_name (string)      - name of directory we want to create
         relative_path (string) - absolute path of directory we want to create
-        
     Returns:
         path (string)          - full path of directory
+    --------------
     """
     
     path = relative_path + dir_name
@@ -17,8 +17,16 @@ def create_dir(dir_name, relative_path):
         os.mkdir(path)
     return path
 
-# function to normalize data
 def normalize_data(data):
+    """
+    function to normalize data
+    --------------
+    Parameters:
+        data (dataframe or matrix_like) - data we want to normalize, for example images
+    Returns:
+        dataframe or matrix_like (normalized data)
+    --------------
+    """
     # scale features using statistics that are robust to outliers
     #rs = sklearn.preprocessing.RobustScaler()
     #rs.fit(data)
@@ -28,6 +36,14 @@ def normalize_data(data):
     #data = ((data / 255.)-0.5)*2. # convert from [0:255] to [-1.:+1.]
     return data
 
-# convert one-hot encodings into labels
 def one_hot_to_dense(labels_one_hot):
+    """
+    convert one-hot encodings into labels
+    --------------
+    Parameters:
+        labels_one_hot (matrix_like) - all one hot vectors we want to encode
+    Returns:
+        int (encoded value)
+    --------------
+    """
     return np.argmax(labels_one_hot,1)
