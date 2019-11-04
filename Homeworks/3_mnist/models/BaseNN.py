@@ -4,8 +4,6 @@ from utils import *
 from abc import abstractmethod
 import numpy as np
 import pandas as pd
-import keras.preprocessing.image
-# import sklearn.preprocessing
 import os;
 import datetime  
 import cv2
@@ -13,106 +11,43 @@ import cv2
 class BaseNN:
     def __init__(self, train_images_dir, val_images_dir, test_images_dir, num_epochs, train_batch_size,
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
-                 num_classes, learning_rate, base_dir, max_to_keep, model_name):
+                 num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob):
 
         self.data_loader = DataLoader(train_images_dir, val_images_dir, test_images_dir, train_batch_size, 
                 val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, num_classes)
 
         self.num_epochs = num_epochs
-        self.train_batch_size = train_batch_size
-        self.val_batch_size = val_batch_size
-        self.test_batch_size = test_batch_size
-        self.height_of_image = height_of_image
-        self.width_of_image = width_of_image
-        self.num_channels = num_channels
-        self.num_classes = num_classes
         self.learning_rate = learning_rate
         self.base_dir = base_dir
         self.max_to_keep = max_to_keep
         self.model_name = model_name
+        self.keep_prob = keep_prob
 
         ####
-        self.keep_prob = 0.33 # keeping probability with dropout regularization 
         self.index_in_epoch = 0
         self.current_epoch = 0
         self.n_log_step = 0 # counting current number of mini batches trained on
-        
+
         # permutation array
         self.perm_array = np.array([])
         ####
-        
-    # function to get the next mini batch
-    def next_mini_batch(self, mb_size):
-        start = self.index_in_epoch
-        self.index_in_epoch += mb_size
-        self.current_epoch += mb_size/len(self.x_train)  
-        
-        # adapt length of permutation array
-        if not len(self.perm_array) == len(self.x_train):
-            self.perm_array = np.arange(len(self.x_train))
-        
-        # shuffle once at the start of epoch
-        if start == 0:
-            np.random.shuffle(self.perm_array)
-
-        # at the end of the epoch
-        if self.index_in_epoch > self.x_train.shape[0]:
-            np.random.shuffle(self.perm_array) # shuffle data
-            start = 0 # start next epoch
-            self.index_in_epoch = mb_size # set index to mini batch size
-            
-            if self.train_on_augmented_data:
-                # use augmented data for the next epoch
-                self.x_train_aug = normalize_data(self.generate_images(self.x_train))
-                self.y_train_aug = self.y_train
-                
-        end = self.index_in_epoch
-        
-        if self.train_on_augmented_data:
-            # use augmented data
-            x_tr = self.x_train_aug[self.perm_array[start:end]]
-            y_tr = self.y_train_aug[self.perm_array[start:end]]
-        else:
-            # use original data
-            x_tr = self.x_train[self.perm_array[start:end]]
-            y_tr = self.y_train[self.perm_array[start:end]]
-        
-        return x_tr, y_tr
     
-    # generate new images via rotations, translations, zoom using keras
-    def generate_images(self, imgs):
-    
-        print('generate new set of images')
-        
-        # rotations, translations, zoom
-        image_generator = keras.preprocessing.image.ImageDataGenerator(
-            rotation_range = 10, width_shift_range = 0.1 , height_shift_range = 0.1,
-            zoom_range = 0.1)
-
-        # get transformed images
-        imgs = image_generator.flow(imgs.copy(), np.zeros(len(imgs)),
-                                    batch_size=len(imgs), shuffle = False).next()    
-
-        return imgs[0]
-
-    # attach summaries to a tensor for TensorBoard visualization
-    def summary_variable(self, var, var_name):
-        with tf.name_scope(var_name):
-            mean = tf.reduce_mean(var)
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-            tf.summary.scalar('mean', mean)
-            tf.summary.scalar('stddev', stddev)
-            tf.summary.scalar('max', tf.reduce_max(var))
-            tf.summary.scalar('min', tf.reduce_min(var))
-            tf.summary.histogram('histogram', var)
-    
-    # function to create the network
     def create_network(self):
+        """
+        Create base components of the network.
+        Main structure of network will be described in network function.
+        -----------------
+        Parameters:
+            None
+        Returns:
+            None
+        -----------------
+        """
         tf.reset_default_graph()
 
         # variables for input and output 
-        self.x_data_tf = tf.placeholder(dtype=tf.float32, shape=[None, self.height_of_image, self.width_of_image, self.num_channels], name='x_data_tf')
-        self.y_data_tf = tf.placeholder(dtype=tf.float32, shape=[None, self.num_classes], name='y_data_tf')
+        self.x_data_tf = tf.placeholder(dtype=tf.float32, shape=[None, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels], name='x_data_tf')
+        self.y_data_tf = tf.placeholder(dtype=tf.float32, shape=[None, self.data_loader.num_classes], name='y_data_tf')
 
         self.z_pred_tf = self.network(self.x_data_tf)
 
@@ -148,10 +83,38 @@ class BaseNN:
                                         name='valid_acc_tf', validate_shape = False)
 
         return None
+
+    def summary_variable(self, var, var_name):
+        """
+        Attach summaries to a tensor for TensorBoard visualization
+        -----------------
+        Parameters:
+            var         - variable we want to attach
+            var_name    - name of the variable
+        Returns:
+            None
+        -----------------
+        """
+        with tf.name_scope(var_name):
+            mean = tf.reduce_mean(var)
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+            tf.summary.scalar('mean', mean)
+            tf.summary.scalar('stddev', stddev)
+            tf.summary.scalar('max', tf.reduce_max(var))
+            tf.summary.scalar('min', tf.reduce_min(var))
+            tf.summary.histogram('histogram', var)
+        return None
     
     def attach_summary(self, sess):
-        
-        # create summary tensors for tensorboard
+        """
+        Create summary tensors for tensorboard.
+        -----------------
+        Parameters:
+            sess - the session for which we want to create summaries
+        Returns:
+            None
+        -----------------
+        """
         self.summary_variable(self.W_conv1_tf, 'W_conv1_tf')
         self.summary_variable(self.b_conv1_tf, 'b_conv1_tf')
         self.summary_variable(self.W_conv2_tf, 'W_conv2_tf')
@@ -170,38 +133,101 @@ class BaseNN:
 
         # initialize summary writer 
         timestamp = datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
-        filepath = os.path.join(os.getcwd(), self.base_dir, (self.model_name+'_'+timestamp))
+        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'logs', (self.model_name+'_'+timestamp))
         self.train_writer = tf.summary.FileWriter(os.path.join(filepath,'train'), sess.graph)
         self.valid_writer = tf.summary.FileWriter(os.path.join(filepath,'valid'), sess.graph)
 
-    # helper function to train the model
-    def train_model_helper(self, sess, x_train, y_train, x_valid, y_valid, n_epoch = 1, 
-                    train_on_augmented_data = False):        
-        # train on original or augmented data
-        self.train_on_augmented_data = train_on_augmented_data
+        return None
+
+    def close_writers(self):
+        """
+        Close train and validation summary writer.
+        -----------------
+        Parameters:
+            sess - the session we want to save
+        Returns:
+            None
+        -----------------
+        """
+        self.train_writer.close()
+        self.valid_writer.close()
+
+        return None
+
+    def save_model(self, sess):
+        """
+        Save tensors/summaries
+        -----------------
+        Parameters:
+            sess - the session we want to save
+        Returns:
+            None
+        -----------------
+        """
+        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', self.model_name)
+        self.saver_tf.save(sess, filepath)
         
-        # use augmented data
-        if self.train_on_augmented_data:
-            print('generate new set of images')
-            self.x_train_aug = normalize_data(self.generate_images(self.x_train))
-            self.y_train_aug = self.y_train
+        return None
+
+    # function to get the next mini batch
+    def next_mini_batch(self, mb_size): ## Will be deleted in the future
+        start = self.index_in_epoch
+        self.index_in_epoch += mb_size
+        self.current_epoch += mb_size/len(self.x_train)  
+        
+        # adapt length of permutation array
+        if not len(self.perm_array) == len(self.x_train):
+            self.perm_array = np.arange(len(self.x_train))
+        
+        # shuffle once at the start of epoch
+        if start == 0:
+            np.random.shuffle(self.perm_array)
+
+        # at the end of the epoch
+        if self.index_in_epoch > self.x_train.shape[0]:
+            np.random.shuffle(self.perm_array) # shuffle data
+            start = 0 # start next epoch
+            self.index_in_epoch = mb_size # set index to mini batch size
+                
+        end = self.index_in_epoch
+
+        x_tr = self.x_train[self.perm_array[start:end]]
+        y_tr = self.y_train[self.perm_array[start:end]]
+
+        return x_tr, y_tr
+
+    def train_model_helper(self, sess, x_train, y_train, x_valid, y_valid, n_epoch = 1):        
+        """
+        Helper function to train the model.
+        -----------------
+        Parameters:
+            sess - the session for which we want to create summaries
+            x_train (matrix_like) - train images
+            y_train (matrix_like) - labels of train images
+            x_valid (matrix_like) - validation images
+            y_valid (matrix_like) - labels of validation images
+            n_epoch (int)         - number of epochs
+        Returns:
+            None
+        -----------------
+        """
         
         # parameters
-        mb_per_epoch = self.x_train.shape[0]/self.train_batch_size
+        mb_per_epoch = self.x_train.shape[0]/self.data_loader.train_batch_size
         train_loss, train_acc, valid_loss, valid_acc = [],[],[],[]
         
         # start timer
         start = datetime.datetime.now();
         print(datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'),': start training')
-        print('learnrate = ',self.learning_rate,', n_epoch = ', n_epoch,
-              ', mb_size = ', self.train_batch_size)
+        print('learnrate = ', self.learning_rate,', n_epoch = ', n_epoch,
+              ', mb_size = ', self.data_loader.train_batch_size)
         # looping over mini batches
         for i in range(int(n_epoch*mb_per_epoch)+1):            
             # get new batch
-            x_batch, y_batch = self.next_mini_batch(self.train_batch_size)
+            x_batch, y_batch = self.next_mini_batch(self.data_loader.train_batch_size)
 
             # run the graph
-            sess.run(self.train_step_tf, feed_dict={self.x_data_tf: x_batch, 
+            self.sess.run(self.train_step_tf, feed_dict={self.x_data_tf: x_batch, 
                                                     self.y_data_tf: y_batch, 
                                                     self.keep_prob_tf: self.keep_prob, 
                                                     self.learn_rate_tf: self.learning_rate})
@@ -224,7 +250,7 @@ class BaseNN:
                                                        feed_dict = feed_dict_valid))
                 print('%.2f epoch, %.2f iteration: val loss = %.4f, val acc = %.4f'%(
                     self.current_epoch, i, valid_loss[-1],valid_acc[-1]))
-                
+
             # summary for tensorboard
             if i%self.summary_step == 0:
                 self.n_log_step += 1 # for logging the results
@@ -243,7 +269,7 @@ class BaseNN:
                 print('%.2f epoch, %.2f iteration: train loss = %.4f, train acc = %.4f'%(
                     self.current_epoch, i,  train_loss[-1],train_acc[-1]))
                 
-            # save tensors and summaries of model
+            # save current model to disk
             if i%self.checkpoint_step == 0:
                 self.save_model(sess)
                 
@@ -262,6 +288,18 @@ class BaseNN:
         return None
     
     def train_model(self, display_step, validation_step, checkpoint_step, summary_step):
+        """
+        Main function for model training.
+        -----------------
+        Parameters:
+            display_step       (int)   - Number of steps we cycle through before displaying detailed progress
+            validation_step    (int)   - Number of steps we cycle through before validating the model
+            checkpoint_step    (int)   - Number of steps we cycle through before saving checkpoint
+            summary_step       (int)   - Number of steps we cycle through before saving summary
+        Returns:
+            None
+        -----------------
+        """
         self.display_step = display_step
         self.validation_step = validation_step
         self.checkpoint_step = checkpoint_step
@@ -271,74 +309,117 @@ class BaseNN:
         self.x_train, self.y_train = self.data_loader.all_train_data_loader()
         self.x_valid, self.y_valid = self.data_loader.all_val_data_loader()
 
-        self.x_train = self.x_train.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
-        self.x_valid = self.x_valid.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
+        self.x_train = self.x_train.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
+        self.x_valid = self.x_valid.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
 
-        self.saver_tf = tf.train.Saver()
-        # start timer
-        start = datetime.datetime.now();
+        self.saver_tf = tf.train.Saver(max_to_keep = self.max_to_keep)
 
-        # start tensorflow session
-        with tf.Session() as sess:
+        # attach summaries
+        self.attach_summary(self.sess)
 
-            # attach summaries
-            self.attach_summary(sess)
+        # variable initialization of the default graph
+        self.sess.run(tf.global_variables_initializer()) 
 
-            # variable initialization of the default graph
-            sess.run(tf.global_variables_initializer()) 
+        # training on original data
+        self.train_model_helper(self.sess, self.x_train, self.y_train, self.x_valid, self.y_valid, n_epoch = self.num_epochs)
 
-            # training on original data
-            self.train_model_helper(sess, self.x_train, self.y_train, self.x_valid, self.y_valid, n_epoch = self.num_epochs)
+        # save final model
+        self.save_model(self.sess)
 
-            # training on augmented data
-            # self.train_model_helper(sess, x_train, y_train, x_valid, y_valid, n_epoch = 14.0,
-            #                     train_on_augmented_data = True)
+        self.close_writers()
 
-            # save tensors and summaries of model
-            self.save_model(sess)
+    def get_accuracy(self, sess):
+        """
+        Get accuracies of training and validation sets.
+        -----------------
+        Parameters:
+            sess - session
+        Returns:
+            tuple (tuple of lists) train and validation accuracies
+        -----------------
+        """
+        train_acc = self.train_acc_tf.eval(session = sess)
+        valid_acc = self.valid_acc_tf.eval(session = sess)
+        return train_acc, valid_acc
 
-        print('total running time for training: ', datetime.datetime.now() - start)
+    def get_loss(self, sess):
+        """
+        Get losses of training and validation sets.
+        -----------------
+        Parameters:
+            sess - session
+        Returns:
+            tuple (tuple of lists) train and validation losses
+        -----------------
+        """
+        train_loss = self.train_loss_tf.eval(session = sess)
+        valid_loss = self.valid_loss_tf.eval(session = sess)
+        return train_loss, valid_loss 
 
-    # save tensors/summaries
-    def save_model(self, sess):
-        # tf saver
-        filepath = os.path.join(os.getcwd(), self.model_name)
-        self.saver_tf.save(sess, filepath)
-        # tb summary
-        self.train_writer.close()
-        self.valid_writer.close()
-        
-        return None
-  
-    # forward prediction of current graph
     def forward(self, sess, x_data):
+        """
+        Forward prediction of current graph.
+        Will be used in test_model method.
+        -----------------
+        Parameters:
+            sess                 - actual session
+            x_data (matrix_like) - data for which we want to calculate predicted probabilities
+        Returns:
+            vector_like - predicted probabilities for input data
+        -----------------
+        """
         y_pred_proba = self.y_pred_proba_tf.eval(session = sess, 
                                                  feed_dict = {self.x_data_tf: x_data,
                                                               self.keep_prob_tf: 1.0})
         return y_pred_proba
     
-    # load session from file, restore graph, and load tensors
     def load_session_from_file(self, filename):
+        """
+        Load session from file, restore graph, and load tensors.
+        -----------------
+        Parameters:
+            filename (string) - the name of the model (name of file we saved in disk)
+        Returns:
+            session
+        -----------------
+        """
         tf.reset_default_graph()
+
         filepath = os.path.join(os.getcwd(), filename + '.meta')
-        saver = tf.train.import_meta_graph(filepath)
+        # filepath = os.path.join(os.getcwd(), self.base_dir, filename + '.meta')
+        # filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, filename + '.meta')
+        # filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', filename + '.meta')
         print(filepath)
+        saver = tf.train.import_meta_graph(filepath)
         sess = tf.Session()
         saver.restore(sess, self.model_name)
         graph = tf.get_default_graph()
-        self.load_tensors(graph)
-        return sess
-    
-    # load model and test on test data
-    def test_model(self):
-        x_test, y_test = self.data_loader.all_test_data_loader()
-        x_test = x_test.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
         
-        sess = self.load_session_from_file(self.model_name) # receive session 
+        self.load_tensors(graph)
+        
+        return sess
+
+    def test_model(self):
+        """
+        load model and test on test data.
+        -----------------
+        Parameters:
+            None
+        Returns:
+            metric, defined in dnn class (for example accuracy)
+        -----------------
+        """
+        x_test, y_test = self.data_loader.all_test_data_loader()
+        x_test = x_test.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
+        
+        sess = self.load_session_from_file(self.model_name)
+        
         y_test_pred = {}
         y_test_pred_labels = {}
         y_test_pred[self.model_name] = self.forward(sess, x_test)
+
         sess.close()
+        
         y_test_pred_labels[self.model_name] = one_hot_to_dense(y_test_pred[self.model_name])
         y_test = one_hot_to_dense(y_test)
         
@@ -346,11 +427,29 @@ class BaseNN:
         return self.metrics(y_test, y_test_pred_labels[self.model_name])
         
     # Initialize network from meta file
+    # def initialize_network(self):
+    # 	filepath = os.path.join(os.getcwd(), self.model_name + '.meta')
+    # 	if os.path.isdir(filepath):
+    # 		self.load_session_from_file(self.model_name)
+    # 	return None
+
     def initialize_network(self):
-    	filepath = os.path.join(os.getcwd(), self.model_name + '.meta')
-    	if os.path.isdir(filepath):
-    		self.load_session_from_file(self.model_name)
-    	return None
+        """
+        Initialize network from last checkpoint if exists, otherwise initialize with random values.
+        -----------------
+        Parameters:
+            None
+        Returns:
+            metric, defined in dnn class (for example accuracy)
+        -----------------
+        """
+        self.sess = tf.InteractiveSession()
+        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', self.model_name + '.meta')
+        if ~os.path.isdir(filepath):
+          self.sess.run(tf.global_variables_initializer())
+        else:
+            self.sess = self.load_session_from_file(self.model_name)
+        return None
     
     @abstractmethod
     def network(self, X):

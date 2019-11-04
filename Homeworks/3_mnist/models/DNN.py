@@ -4,13 +4,12 @@ class DNN(BaseNN):
 
     def __init__(self, train_images_dir, val_images_dir, test_images_dir, num_epochs, train_batch_size,
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
-                 num_classes, learning_rate, base_dir, max_to_keep, model_name):
+                 num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob):
 
         super().__init__(train_images_dir, val_images_dir, test_images_dir, num_epochs, train_batch_size,
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
-                 num_classes, learning_rate, base_dir, max_to_keep, model_name)
+                 num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob)
 
-        # tunable hyperparameters for nn architecture
         self.s_f_conv1 = 3; # filter size of first convolution layer (default = 3)
         self.n_f_conv1 = 36; # number of features of first convolution layer (default = 36)
         self.s_f_conv2 = 3; # filter size of second convolution layer (default = 3)
@@ -19,27 +18,72 @@ class DNN(BaseNN):
         self.n_f_conv3 = 36; # number of features of third convolution layer (default = 36)
         self.n_n_fc1 = 576; # number of neurons of first fully connected layer (default = 576)
 
-    # weight initialization
     def weight_variable(self, shape, name = None):
+        """
+        Weight initialization
+        -----------------
+        Parameters:
+            shape   (tuple)     - shape of weight variable
+            name    (string)    - name of weight variable
+        Returns:
+            tf.Variable         - initialized weight variable
+        -----------------
+        """
         initial = tf.truncated_normal(shape, stddev=0.1)
         return tf.Variable(initial, name = name)
 
-    # bias initialization
     def bias_variable(self, shape, name = None):
+        """
+        Bias initialization
+        -----------------
+        Parameters:
+            shape   (tuple)     - shape of bias variable
+            name    (string)    - name of bias variable
+        Returns:
+            tf.Variable         - initialized bias variable
+        -----------------
+        """
         initial = tf.constant(0.1, shape=shape) #  positive bias
         return tf.Variable(initial, name = name)
 
-    # 2D convolution
     def conv2d(self, x, W, name = None):
+        """
+        2D convolution
+        -----------------
+        Parameters:
+            x       (matrix-like)   - input data
+            W       (tf.Variable)   - Weight matrix
+            name    (string)        - name of the graph node
+        Returns:
+            tf.Conv                 - Convolution response
+        -----------------
+        """
         return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME', name = name)
 
-    # max pooling
     def max_pool_2x2(self, x, name = None):
+        """
+        2 x 2 max pooling
+        -----------------
+        Parameters:
+            x       (matrix-like)   - matrix we want to apply max pooling
+            name    (string)        - name of the graph node
+        Returns:
+            tf.max_pool             - max pooling response
+        -----------------
+        """
         return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name = name)
     
-    # function to load tensors from a saved graph
     def load_tensors(self, graph):
-        
+        """
+        load tensors from a saved graph
+        -----------------
+        Parameters:
+            graph       (tf.graph_like) - graph we obtained from saved file
+        Returns:
+            None
+        -----------------
+        """
+
         # input tensors
         self.x_data_tf = graph.get_tensor_by_name("x_data_tf:0")
         self.y_data_tf = graph.get_tensor_by_name("y_data_tf:0")
@@ -76,7 +120,7 @@ class DNN(BaseNN):
         self.y_pred_correct_tf = graph.get_tensor_by_name('y_pred_correct_tf:0')
         self.accuracy_tf = graph.get_tensor_by_name('accuracy_tf:0')
         
-        # tensor of stored losses and accuricies during training
+        # tensor of stored losses and accuracies during training
         self.train_loss_tf = graph.get_tensor_by_name("train_loss_tf:0")
         self.train_acc_tf = graph.get_tensor_by_name("train_acc_tf:0")
         self.valid_loss_tf = graph.get_tensor_by_name("valid_loss_tf:0")
@@ -85,7 +129,15 @@ class DNN(BaseNN):
         return None
 
     def network(self, X):
-#         tf.reset_default_graph()
+        """
+        Construct network architecture
+        -----------------
+        Parameters:
+            X       (tensor) - input data with shape of (batch size; height of image; width of image ; num channels)
+        Returns:
+            Last layer of the network (for continuation)
+        -----------------
+        """
 
         # 1.layer: convolution + max pooling
         self.W_conv1_tf = self.weight_variable([self.s_f_conv1, self.s_f_conv1, 1, self.n_f_conv1], name = 'W_conv1_tf') # (3,3,1,36)
@@ -124,6 +176,17 @@ class DNN(BaseNN):
         return self.z_pred_tf
 
     def metrics(self, Y, Y_pred):
+        """
+        Some metric, here I use simple accuracy
+        -----------------
+        Parameters:
+            Y       (array_like) - actual labels
+            Y_pred  (array_like) - predicted labels
+        Returns:
+            Float (Accuracy)
+        -----------------
+        """
+
         Y = Y.reshape(-1,)
         Y_pred = Y_pred.reshape(-1,)
         return np.mean(Y == Y_pred)
