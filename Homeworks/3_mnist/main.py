@@ -1,5 +1,6 @@
 import tensorflow as tf
 from models.DNN import *
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -20,6 +21,7 @@ tf.app.flags.DEFINE_integer('num_channels', 1, 'Number of the channels of the im
 tf.app.flags.DEFINE_integer('num_classes', 10, 'Number of classes.')
 
 tf.app.flags.DEFINE_float('learning_rate', 0.001, 'Learning rate of the optimizer')
+tf.app.flags.DEFINE_float('keep_prob', 0.33, 'Keeping probability with dropout regularization')
 
 tf.app.flags.DEFINE_integer('display_step', 100, 'Number of steps we cycle through before displaying detailed progress.')
 tf.app.flags.DEFINE_integer('validation_step', 100, 'Number of steps we cycle through before validating the model.')
@@ -52,6 +54,7 @@ def main(argv=None):
         base_dir=FLAGS.base_dir,
         max_to_keep=FLAGS.max_to_keep,
         model_name=FLAGS.model_name,
+        keep_prob=FLAGS.keep_prob
     )
 
     model.create_network()
