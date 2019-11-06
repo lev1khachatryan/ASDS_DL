@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/student/Desktop/Sosi/results/softmax_classifier/chekpoints/my-model"
+all_model_checkpoint_paths: "/home/student/Desktop/Sosi/results/softmax_classifier/chekpoints/my-model"
