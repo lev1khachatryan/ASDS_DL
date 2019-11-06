@@ -49,8 +49,6 @@ Here we have DataLoader class, which provides data for train/test/validation
 BaseNN abstract class is defined here. In this class we have everything we need for training except of ***network*** and ***metrics***
 This two methods are abstract (see descriptions in the next chapter)
 
-* ***generate_images*** - takes images as argument and generate new images via rotations, translations, zoom using keras
-
 * ***summary_variable*** - attach summaries to a tensor for TensorBoard visualization
 
 * ***create_network*** - creates whole graph of training:
@@ -72,6 +70,12 @@ This two methods are abstract (see descriptions in the next chapter)
 * ***train_model*** - trains the model passing through data num epochs times, does validation after "validation step" steps, save checkpoint after "checkpoint step" steps and display loss after "display step" steps
 
 * ***save_model*** - save tensors/summaries
+
+* ***close_writers*** - close train and validation summary writers
+
+* ***get_accuracy*** - Get accuracies of training and validation sets.
+
+* ***get_loss*** - Get losses of training and validation sets.
 
 * ***forward*** - forward prediction of current graph
 
