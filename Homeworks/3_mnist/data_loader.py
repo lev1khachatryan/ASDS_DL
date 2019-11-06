@@ -13,9 +13,9 @@ class DataLoader:
         self.val_paths = glob.glob(os.path.join(val_images_dir, "**/*.png"), recursive=True)
         self.test_paths = glob.glob(os.path.join(test_images_dir, "**/*.png"), recursive=True)
 
-        random.shuffle(self.train_paths)
-        random.shuffle(self.val_paths)
-        random.shuffle(self.test_paths)
+#         random.shuffle(self.train_paths)
+#         random.shuffle(self.val_paths)
+#         random.shuffle(self.test_paths)
 
         self.train_batch_size = train_batch_size
         self.val_batch_size = val_batch_size
@@ -39,14 +39,19 @@ class DataLoader:
         ims = []
         lbls = []
         
+        if index == 0:
+            random.shuffle(file_paths)
+        
         while batch_size >= 1 and (len(file_paths) - index > 0):
             im, lbl = self.load_image(file_paths[index], is_flattened)
             ims.append(im)
             lbls.append(lbl)
             batch_size -= 1
             index += 1
-        
-        return np.array(ims), np.array(lbls)
+        imgs = np.array(ims)
+        imgs = imgs.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
+
+        return imgs, np.array(lbls)
 
     def train_data_loader(self, index):
         return self.batch_data_loader(self.train_batch_size, self.train_paths, index)
