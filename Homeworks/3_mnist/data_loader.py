@@ -35,11 +35,11 @@ class DataLoader:
 
         return im, lbl
 
-    def batch_data_loader(self, batch_size, file_paths, index, is_flattened = False):
+    def batch_data_loader(self, batch_size, file_paths, index, is_flattened = False, randomization = False):
         ims = []
         lbls = []
         
-        if index == 0:
+        if index == 0 or randomization:
             random.shuffle(file_paths)
         
         while batch_size >= 1 and (len(file_paths) - index > 0):
@@ -53,14 +53,14 @@ class DataLoader:
 
         return imgs, np.array(lbls)
 
-    def train_data_loader(self, index):
-        return self.batch_data_loader(self.train_batch_size, self.train_paths, index)
+    def train_data_loader(self, index, randomization = False):
+        return self.batch_data_loader(self.train_batch_size, self.train_paths, index, randomization = randomization)
 
-    def val_data_loader(self, index):
-        return self.batch_data_loader(self.val_batch_size, self.val_paths, index)
+    def val_data_loader(self, index, randomization = False):
+        return self.batch_data_loader(self.val_batch_size, self.val_paths, index, randomization = randomization)
 
-    def test_data_loader(self, index):
-        return self.batch_data_loader(self.test_batch_size, self.test_paths, index)
+    def test_data_loader(self, index, randomization = False):
+        return self.batch_data_loader(self.test_batch_size, self.test_paths, index, randomization = randomization)
     
     def get_train_data_size(self):
         return len(self.train_paths)
