@@ -72,6 +72,27 @@ class DNN(BaseNN):
         -----------------
         """
         return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name = name)
+
+    def summary_variable(self, var, var_name):
+        """
+        Attach summaries to a tensor for TensorBoard visualization
+        -----------------
+        Parameters:
+            var         - variable we want to attach
+            var_name    - name of the variable
+        Returns:
+            None
+        -----------------
+        """
+        with tf.name_scope(var_name):
+            mean = tf.reduce_mean(var)
+            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
+            tf.summary.scalar('mean', mean)
+            tf.summary.scalar('stddev', stddev)
+            tf.summary.scalar('max', tf.reduce_max(var))
+            tf.summary.scalar('min', tf.reduce_min(var))
+            tf.summary.histogram('histogram', var)
+        return None
     
     def load_tensors(self, graph):
         """
@@ -125,6 +146,40 @@ class DNN(BaseNN):
         self.train_acc_tf = graph.get_tensor_by_name("train_acc_tf:0")
         self.valid_loss_tf = graph.get_tensor_by_name("valid_loss_tf:0")
         self.valid_acc_tf = graph.get_tensor_by_name("valid_acc_tf:0")
+
+        return None
+
+    def attach_summary(self, sess):
+        """
+        Create summary tensors for tensorboard.
+        -----------------
+        Parameters:
+            sess - the session for which we want to create summaries
+        Returns:
+            None
+        -----------------
+        """
+        self.summary_variable(self.W_conv1_tf, 'W_conv1_tf')
+        self.summary_variable(self.b_conv1_tf, 'b_conv1_tf')
+        self.summary_variable(self.W_conv2_tf, 'W_conv2_tf')
+        self.summary_variable(self.b_conv2_tf, 'b_conv2_tf')
+        self.summary_variable(self.W_conv3_tf, 'W_conv3_tf')
+        self.summary_variable(self.b_conv3_tf, 'b_conv3_tf')
+        self.summary_variable(self.W_fc1_tf, 'W_fc1_tf')
+        self.summary_variable(self.b_fc1_tf, 'b_fc1_tf')
+        self.summary_variable(self.W_fc2_tf, 'W_fc2_tf')
+        self.summary_variable(self.b_fc2_tf, 'b_fc2_tf')
+        tf.summary.scalar('cross_entropy_tf', self.cross_entropy_tf)
+        tf.summary.scalar('accuracy_tf', self.accuracy_tf)
+
+        # merge all summaries for tensorboard
+        self.merged = tf.summary.merge_all()
+
+        # initialize summary writer 
+        timestamp = datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
+        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'logs', (self.model_name+'_'+timestamp))
+        self.train_writer = tf.summary.FileWriter(os.path.join(filepath,'train'), sess.graph)
+        self.valid_writer = tf.summary.FileWriter(os.path.join(filepath,'valid'), sess.graph)
 
         return None
 

@@ -77,61 +77,6 @@ class BaseNN:
 
         return None
 
-    def summary_variable(self, var, var_name):
-        """
-        Attach summaries to a tensor for TensorBoard visualization
-        -----------------
-        Parameters:
-            var         - variable we want to attach
-            var_name    - name of the variable
-        Returns:
-            None
-        -----------------
-        """
-        with tf.name_scope(var_name):
-            mean = tf.reduce_mean(var)
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-            tf.summary.scalar('mean', mean)
-            tf.summary.scalar('stddev', stddev)
-            tf.summary.scalar('max', tf.reduce_max(var))
-            tf.summary.scalar('min', tf.reduce_min(var))
-            tf.summary.histogram('histogram', var)
-        return None
-    
-    def attach_summary(self, sess):
-        """
-        Create summary tensors for tensorboard.
-        -----------------
-        Parameters:
-            sess - the session for which we want to create summaries
-        Returns:
-            None
-        -----------------
-        """
-        self.summary_variable(self.W_conv1_tf, 'W_conv1_tf')
-        self.summary_variable(self.b_conv1_tf, 'b_conv1_tf')
-        self.summary_variable(self.W_conv2_tf, 'W_conv2_tf')
-        self.summary_variable(self.b_conv2_tf, 'b_conv2_tf')
-        self.summary_variable(self.W_conv3_tf, 'W_conv3_tf')
-        self.summary_variable(self.b_conv3_tf, 'b_conv3_tf')
-        self.summary_variable(self.W_fc1_tf, 'W_fc1_tf')
-        self.summary_variable(self.b_fc1_tf, 'b_fc1_tf')
-        self.summary_variable(self.W_fc2_tf, 'W_fc2_tf')
-        self.summary_variable(self.b_fc2_tf, 'b_fc2_tf')
-        tf.summary.scalar('cross_entropy_tf', self.cross_entropy_tf)
-        tf.summary.scalar('accuracy_tf', self.accuracy_tf)
-
-        # merge all summaries for tensorboard
-        self.merged = tf.summary.merge_all()
-
-        # initialize summary writer 
-        timestamp = datetime.datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
-        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'logs', (self.model_name+'_'+timestamp))
-        self.train_writer = tf.summary.FileWriter(os.path.join(filepath,'train'), sess.graph)
-        self.valid_writer = tf.summary.FileWriter(os.path.join(filepath,'valid'), sess.graph)
-
-        return None
-
     def close_writers(self):
         """
         Close train and validation summary writer.
@@ -188,14 +133,15 @@ class BaseNN:
             # looping over mini batches
             for i in range(1, int(np.ceil(self.data_loader.get_train_data_size() / self.data_loader.train_batch_size))+1):
                 x_batch, y_batch = self.data_loader.train_data_loader(index)
+                x_valid, y_valid = self.data_loader.val_data_loader(0, randomization = True)
                 
                 self.sess.run(self.train_step_tf,feed_dict={self.x_data_tf: x_batch,
                                                             self.y_data_tf: y_batch,
                                                             self.keep_prob_tf: self.keep_prob,
                                                             self.learn_rate_tf: self.learning_rate})
 
-                feed_dict_valid = {self.x_data_tf: self.x_valid,
-                                   self.y_data_tf: self.y_valid,
+                feed_dict_valid = {self.x_data_tf: x_valid,
+                                   self.y_data_tf: y_valid,
                                    self.keep_prob_tf: 1.0}
 
                 feed_dict_train = {self.x_data_tf: x_batch,
@@ -267,8 +213,7 @@ class BaseNN:
         self.checkpoint_step = checkpoint_step
         self.summary_step = summary_step
         
-        # training and validation data
-        self.x_valid, self.y_valid = self.data_loader.all_val_data_loader()
+        # self.x_valid, self.y_valid = self.data_loader.all_val_data_loader()
 
         self.saver_tf = tf.train.Saver(max_to_keep = self.max_to_keep)
 
@@ -365,8 +310,7 @@ class BaseNN:
         -----------------
         """
         x_test, y_test = self.data_loader.all_test_data_loader()
-        x_test = x_test.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
-        
+
         sess = self.load_session_from_file(self.model_name)
         
         y_test_pred = {}
@@ -381,6 +325,52 @@ class BaseNN:
         print('Test Accuracy: ', self.metrics(y_test, y_test_pred_labels[self.model_name]))
         return self.metrics(y_test, y_test_pred_labels[self.model_name])
 
+    # def test_model(self):
+    #     """
+    #     Model Prediction with batches - draft state
+    #     -----------------
+    #     Parameters:
+    #         None
+    #     Returns:
+    #         metric, defined in dnn class (for example accuracy)
+    #     -----------------
+    #     """
+    #     x_test, y_test = self.data_loader.all_test_data_loader()
+                
+    #     sess = self.load_session_from_file(self.model_name)
+        
+    #     y_test_pred = {self.model_name : []}
+    #     y_test_pred_labels = {}
+        
+    #     accuracies = []
+        
+    #     # looping over mini batches
+    #     index = 0
+    #     for i in range(1, int(np.ceil(self.data_loader.get_test_data_size() / self.data_loader.test_batch_size))+1):
+    #         x_test, y_test = self.data_loader.test_data_loader(index)
+    #         y_test_pred[self.model_name].append(self.forward(sess, x_test))
+    #         # y_test_pred[self.model_name] = self.forward(sess, x_test)
+            
+    #         y_test_pred_labels[self.model_name] = one_hot_to_dense(y_test_pred[self.model_name])
+    #         y_test = one_hot_to_dense(y_test)
+            
+    #         accuracies.append(self.metrics(y_test, y_test_pred_labels[self.model_name]))
+        
+    #     # for i in y_test_pred.values():
+    #     #     y_test_pred_ = np.concatenate( i, axis=0 )
+        
+    #     sess.close()
+        
+    #     return accuracies
+        
+    #     # return y_test_pred_
+    
+    #     # y_test_pred_labels[self.model_name] = one_hot_to_dense(y_test_pred[self.model_name])
+    #     # y_test = one_hot_to_dense(y_test)
+        
+    #     # print('Test Accuracy: ', self.metrics(y_test, y_test_pred_labels[self.model_name]))
+    #     # return self.metrics(y_test, y_test_pred_labels[self.model_name])
+
     def initialize_network(self):
         """
         Initialize network from last checkpoint if exists, otherwise initialize with random values.
@@ -394,7 +384,7 @@ class BaseNN:
         self.sess = tf.InteractiveSession()
         filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', self.model_name + '.meta')
         if ~os.path.isdir(filepath):
-          self.sess.run(tf.global_variables_initializer())
+            self.sess.run(tf.global_variables_initializer())
         else:
             self.sess = self.load_session_from_file(self.model_name)
         return None
