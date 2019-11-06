@@ -23,14 +23,7 @@ class BaseNN:
         self.model_name = model_name
         self.keep_prob = keep_prob
 
-        ####
-        self.index_in_epoch = 0
-        self.current_epoch = 0
         self.n_log_step = 0 # counting current number of mini batches trained on
-
-        # permutation array
-        self.perm_array = np.array([])
-        ####
     
     def create_network(self):
         """
@@ -169,109 +162,78 @@ class BaseNN:
         
         return None
 
-    # function to get the next mini batch
-    def next_mini_batch(self, mb_size): ## Will be deleted in the future
-        start = self.index_in_epoch
-        self.index_in_epoch += mb_size
-        self.current_epoch += mb_size/len(self.x_train)  
-        
-        # adapt length of permutation array
-        if not len(self.perm_array) == len(self.x_train):
-            self.perm_array = np.arange(len(self.x_train))
-        
-        # shuffle once at the start of epoch
-        if start == 0:
-            np.random.shuffle(self.perm_array)
-
-        # at the end of the epoch
-        if self.index_in_epoch > self.x_train.shape[0]:
-            np.random.shuffle(self.perm_array) # shuffle data
-            start = 0 # start next epoch
-            self.index_in_epoch = mb_size # set index to mini batch size
-                
-        end = self.index_in_epoch
-
-        x_tr = self.x_train[self.perm_array[start:end]]
-        y_tr = self.y_train[self.perm_array[start:end]]
-
-        return x_tr, y_tr
-
-    def train_model_helper(self, sess, x_train, y_train, x_valid, y_valid, n_epoch = 1):        
+    def train_model_helper(self, sess, n_epoch = 1):
         """
         Helper function to train the model.
         -----------------
         Parameters:
-            sess - the session for which we want to create summaries
-            x_train (matrix_like) - train images
-            y_train (matrix_like) - labels of train images
-            x_valid (matrix_like) - validation images
-            y_valid (matrix_like) - labels of validation images
+            sess - current session
             n_epoch (int)         - number of epochs
         Returns:
             None
         -----------------
         """
         
-        # parameters
-        mb_per_epoch = self.x_train.shape[0]/self.data_loader.train_batch_size
         train_loss, train_acc, valid_loss, valid_acc = [],[],[],[]
         
         # start timer
-        start = datetime.datetime.now();
+        start = datetime.datetime.now()
         print(datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'),': start training')
         print('learnrate = ', self.learning_rate,', n_epoch = ', n_epoch,
               ', mb_size = ', self.data_loader.train_batch_size)
-        # looping over mini batches
-        for i in range(int(n_epoch*mb_per_epoch)+1):            
-            # get new batch
-            x_batch, y_batch = self.next_mini_batch(self.data_loader.train_batch_size)
-
-            # run the graph
-            self.sess.run(self.train_step_tf, feed_dict={self.x_data_tf: x_batch, 
-                                                    self.y_data_tf: y_batch, 
-                                                    self.keep_prob_tf: self.keep_prob, 
-                                                    self.learn_rate_tf: self.learning_rate})
-            
-            feed_dict_valid = {self.x_data_tf: self.x_valid, 
-                               self.y_data_tf: self.y_valid, 
-                               self.keep_prob_tf: 1.0}
-            # feed_dict_train = {self.x_data_tf: self.x_train[self.perm_array[:len(self.x_valid)]], 
-            #                     self.y_data_tf: self.y_train[self.perm_array[:len(self.y_valid)]], 
-            #                     self.keep_prob_tf: 1.0}
-            feed_dict_train = {self.x_data_tf: x_batch, 
-                                self.y_data_tf: y_batch, 
-                                self.keep_prob_tf: 1.0}
-            
-            # store losses and accuracies
-            if i%self.validation_step == 0:
-                valid_loss.append(sess.run(self.cross_entropy_tf,
-                                           feed_dict = feed_dict_valid))
-                valid_acc.append(self.accuracy_tf.eval(session = sess, 
-                                                       feed_dict = feed_dict_valid))
-                print('%.2f epoch, %.2f iteration: val loss = %.4f, val acc = %.4f'%(
-                    self.current_epoch, i, valid_loss[-1],valid_acc[-1]))
-
-            # summary for tensorboard
-            if i%self.summary_step == 0:
-                self.n_log_step += 1 # for logging the results
-                train_summary = sess.run(self.merged, feed_dict={self.x_data_tf: x_batch, 
-                                                                self.y_data_tf: y_batch, 
-                                                                self.keep_prob_tf: 1.0})
-                valid_summary = sess.run(self.merged, feed_dict = feed_dict_valid)
-                self.train_writer.add_summary(train_summary, self.n_log_step)
-                self.valid_writer.add_summary(valid_summary, self.n_log_step)
+        
+        # looping over epochs
+        for e in range(1, n_epoch+1):
+            index = 0
+            # looping over mini batches
+            for i in range(1, int(np.ceil(self.data_loader.get_train_data_size() / self.data_loader.train_batch_size))+1):
+                x_batch, y_batch = self.data_loader.train_data_loader(index)
                 
-            if i%self.display_step == 0:
-                train_loss.append(sess.run(self.cross_entropy_tf,
-                                           feed_dict = feed_dict_train))
-                train_acc.append(self.accuracy_tf.eval(session = sess, 
-                                                       feed_dict = feed_dict_train))
-                print('%.2f epoch, %.2f iteration: train loss = %.4f, train acc = %.4f'%(
-                    self.current_epoch, i,  train_loss[-1],train_acc[-1]))
+                self.sess.run(self.train_step_tf,feed_dict={self.x_data_tf: x_batch,
+                                                            self.y_data_tf: y_batch,
+                                                            self.keep_prob_tf: self.keep_prob,
+                                                            self.learn_rate_tf: self.learning_rate})
+
+                feed_dict_valid = {self.x_data_tf: self.x_valid,
+                                   self.y_data_tf: self.y_valid,
+                                   self.keep_prob_tf: 1.0}
+
+                feed_dict_train = {self.x_data_tf: x_batch,
+                                    self.y_data_tf: y_batch,
+                                    self.keep_prob_tf: 1.0}
                 
-            # save current model to disk
-            if i%self.checkpoint_step == 0:
-                self.save_model(sess)
+                # store losses and accuracies
+                if i%self.validation_step == 0:
+                    valid_loss.append(sess.run(self.cross_entropy_tf,
+                                               feed_dict = feed_dict_valid))
+                    valid_acc.append(self.accuracy_tf.eval(session = sess, 
+                                                           feed_dict = feed_dict_valid))
+                    print('%.0f epoch, %.0f iteration: val loss = %.4f, val acc = %.4f'%(
+                        e, i, valid_loss[-1],valid_acc[-1]))
+
+                # summary for tensorboard
+                if i%self.summary_step == 0:
+                    self.n_log_step += 1 # for logging the results
+                    train_summary = sess.run(self.merged, feed_dict={self.x_data_tf: x_batch, 
+                                                                    self.y_data_tf: y_batch, 
+                                                                    self.keep_prob_tf: 1.0})
+                    valid_summary = sess.run(self.merged, feed_dict = feed_dict_valid)
+                    self.train_writer.add_summary(train_summary, self.n_log_step)
+                    self.valid_writer.add_summary(valid_summary, self.n_log_step)
+
+                if i%self.display_step == 0:
+                    train_loss.append(sess.run(self.cross_entropy_tf,
+                                               feed_dict = feed_dict_train))
+                    train_acc.append(self.accuracy_tf.eval(session = sess, 
+                                                           feed_dict = feed_dict_train))
+                    print('%.0f epoch, %.0f iteration: train loss = %.4f, train acc = %.4f'%(
+                        e, i,  train_loss[-1],train_acc[-1]))
+
+                # save current model to disk
+                if i%self.checkpoint_step == 0:
+                    self.save_model(sess)
+                
+                index += self.data_loader.train_batch_size
                 
         # concatenate losses and accuracies and assign to tensor variables
         tl_c = np.concatenate([self.train_loss_tf.eval(session=sess), train_loss], axis = 0)
@@ -306,22 +268,15 @@ class BaseNN:
         self.summary_step = summary_step
         
         # training and validation data
-        self.x_train, self.y_train = self.data_loader.all_train_data_loader()
         self.x_valid, self.y_valid = self.data_loader.all_val_data_loader()
-
-        self.x_train = self.x_train.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
-        self.x_valid = self.x_valid.reshape(-1, self.data_loader.height_of_image, self.data_loader.width_of_image, self.data_loader.num_channels)
 
         self.saver_tf = tf.train.Saver(max_to_keep = self.max_to_keep)
 
         # attach summaries
         self.attach_summary(self.sess)
 
-        # variable initialization of the default graph
-        self.sess.run(tf.global_variables_initializer()) 
-
         # training on original data
-        self.train_model_helper(self.sess, self.x_train, self.y_train, self.x_valid, self.y_valid, n_epoch = self.num_epochs)
+        self.train_model_helper(self.sess, n_epoch = self.num_epochs)
 
         # save final model
         self.save_model(self.sess)
@@ -425,13 +380,6 @@ class BaseNN:
         
         print('Test Accuracy: ', self.metrics(y_test, y_test_pred_labels[self.model_name]))
         return self.metrics(y_test, y_test_pred_labels[self.model_name])
-        
-    # Initialize network from meta file
-    # def initialize_network(self):
-    # 	filepath = os.path.join(os.getcwd(), self.model_name + '.meta')
-    # 	if os.path.isdir(filepath):
-    # 		self.load_session_from_file(self.model_name)
-    # 	return None
 
     def initialize_network(self):
         """
