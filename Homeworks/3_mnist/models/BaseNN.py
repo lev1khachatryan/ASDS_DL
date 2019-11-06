@@ -396,3 +396,11 @@ class BaseNN:
     @abstractmethod
     def metrics(self, Y, y_pred):
         raise NotImplementedError('subclasses must override metrics()!')
+
+    @abstractmethod
+    def load_tensors(self, graph):
+        raise NotImplementedError('subclasses must override metrics()!')
+
+    @abstractmethod
+    def attach_summary(self, sess):
+        raise NotImplementedError('subclasses must override metrics()!')
