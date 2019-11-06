@@ -49,8 +49,6 @@ Here we have DataLoader class, which provides data for train/test/validation
 BaseNN abstract class is defined here. In this class we have everything we need for training except of ***network*** and ***metrics***
 This two methods are abstract (see descriptions in the next chapter)
 
-* ***summary_variable*** - attach summaries to a tensor for TensorBoard visualization
-
 * ***create_network*** - creates whole graph of training:
 
     * define placeholders for input and labels
@@ -62,8 +60,6 @@ This two methods are abstract (see descriptions in the next chapter)
     * setup optimizer,
 
     * setup operation which minimizes loss function
-    
-* ***attach_summary*** - create summary tensors for tensorboard
 
 * ***train_model_helper*** - helper function to train the model
 
@@ -89,6 +85,10 @@ This two methods are abstract (see descriptions in the next chapter)
 
 * ***metrics*** - abstract method, see descriptions in the next chapter
 
+* ***load_tensors*** - abstract method, see descriptions in the next chapter
+
+* ***attach_summary*** - abstract method, see descriptions in the next chapter
+
 ## 6. DNN
 
 Here we have DNN class, which inherits from BaseNN class. ***network*** and ***metrics*** abstract methods are implemented here, and also some helper methods for code understandability.
@@ -102,6 +102,10 @@ Here we have DNN class, which inherits from BaseNN class. ***network*** and ***m
 * ***max_pool_2x2*** - takes x and performs max pooling 2 x 2, padding = 'SAME'
 
 * ***load_tensors*** - takes graph and initialize network's all parameters according to that graph
+
+* ***summary_variable*** - attach summaries to a tensor for TensorBoard visualization
+
+* ***attach_summary*** - create summary tensors for tensorboard
 
 * ***network*** - takes an input with shape (batch size; height of image; width of image ; num channels) and gives output with shape (batch size, num classes) using below mentioned architecture.
 
