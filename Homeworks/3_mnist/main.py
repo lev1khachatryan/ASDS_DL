@@ -9,7 +9,7 @@ tf.app.flags.DEFINE_string('train_images_dir', 'C:/_Files/MyProjects/ASDS_3/ASDS
 tf.app.flags.DEFINE_string('val_images_dir', 'C:/_Files/MyProjects/ASDS_3/ASDS_DL/Homeworks/3_mnist/_inputs_image/all/validation/image/', 'Validation images data directory.')
 tf.app.flags.DEFINE_string('test_images_dir', 'C:/_Files/MyProjects/ASDS_3/ASDS_DL/Homeworks/3_mnist/_inputs_image/all/test/image/', 'Testing images data directory.')
 
-tf.app.flags.DEFINE_boolean('train', False, 'whether to train the network')
+tf.app.flags.DEFINE_boolean('train', True, 'whether to train the network')
 tf.app.flags.DEFINE_integer('num_epochs', 100, 'epochs to train')
 tf.app.flags.DEFINE_integer('train_batch_size', 64, 'number of elements in a training batch')
 tf.app.flags.DEFINE_integer('val_batch_size', 64, 'number of elements in a validation batch')
