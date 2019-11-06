@@ -89,8 +89,6 @@ This two methods are abstract (see descriptions in the next chapter)
 
 * ***metrics*** - abstract method, see descriptions in the next chapter
 
-Something will be changed here soon.
-
 ## 6. DNN
 
 Here we have DNN class, which inherits from BaseNN class. ***network*** and ***metrics*** abstract methods are implemented here, and also some helper methods for code understandability.
