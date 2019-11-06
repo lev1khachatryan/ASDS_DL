@@ -110,9 +110,24 @@ Here we have DNN class, which inherits from BaseNN class. ***network*** and ***m
 * ***metrics*** - takes actual and predicted values and computes accuracy
 
 
+# Results
 
+After ***83*** epochs, with the following parameters, Test Accuracy was ***98.95 % ***
 
+![](_assets/prediction.png)
 
+* train_batch_size = 64
 
+* learning_rate = 0.001
 
+* keep_prob = 0.33
 
+***Some additional information***
+
+Train/Validation accuracies
+![](_assets/accuracy.png)
+
+Train/Validation losses
+![](_assets/loss.png)
+
+For more information you can use TensorBoard, where all weights ***distributions*** and ***histograms*** are saved.
