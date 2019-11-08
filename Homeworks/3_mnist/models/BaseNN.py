@@ -382,8 +382,9 @@ class BaseNN:
         -----------------
         """
         self.sess = tf.InteractiveSession()
-        filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', self.model_name + '.meta')
-        if ~os.path.isdir(filepath):
+        # filepath = os.path.join(os.getcwd(), self.base_dir, self.model_name, 'checkpoints', self.model_name + '.meta')
+        filepath = os.path.join(os.getcwd(), self.model_name + '.meta')
+        if os.path.isfile(filepath) == False:
             self.sess.run(tf.global_variables_initializer())
         else:
             self.sess = self.load_session_from_file(self.model_name)
