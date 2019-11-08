@@ -10,13 +10,13 @@ class DNN(BaseNN):
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
                  num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob)
 
-        self.s_f_conv1 = 3; # filter size of first convolution layer (default = 3)
-        self.n_f_conv1 = 36; # number of features of first convolution layer (default = 36)
-        self.s_f_conv2 = 3; # filter size of second convolution layer (default = 3)
-        self.n_f_conv2 = 36; # number of features of second convolution layer (default = 36)
-        self.s_f_conv3 = 3; # filter size of third convolution layer (default = 3)
-        self.n_f_conv3 = 36; # number of features of third convolution layer (default = 36)
-        self.n_n_fc1 = 576; # number of neurons of first fully connected layer (default = 576)
+        self.s_f_conv1 = 3; # filter size of first convolution layer
+        self.n_f_conv1 = 36; # number of features of first convolution layer
+        self.s_f_conv2 = 3; # filter size of second convolution layer
+        self.n_f_conv2 = 36; # number of features of second convolution layer
+        self.s_f_conv3 = 3; # filter size of third convolution layer
+        self.n_f_conv3 = 36; # number of features of third convolution layer
+        self.n_n_fc1 = 576; # number of neurons of first fully connected layer
 
     def weight_variable(self, shape, name = None):
         """
