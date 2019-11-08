@@ -32,7 +32,7 @@ tf.app.flags.DEFINE_integer('max_to_keep', 5, 'Number of checkpoint files to kee
 
 tf.app.flags.DEFINE_integer('summary_step', 100, 'Number of steps we cycle through before saving summary.')
 
-tf.app.flags.DEFINE_string('model_name', 'nn_1', 'name of model')
+tf.app.flags.DEFINE_string('model_name', 'CNN', 'name of model')
 
 FLAGS = tf.app.flags.FLAGS
 
