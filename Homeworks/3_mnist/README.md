@@ -16,7 +16,7 @@
 
 ## 1. csv to image
 
-For generalization we must assume that our data consists of images saved in appropriate folders, where each folder contains images with the same label as folder name. To that end we have to download MNIST csv dataset and do some preprocessing. We have to convert our downloaded files to normal images and save each class in appropriate directory.
+For generalization we must assume that our data consists of images saved in corresponding folders, where each folder contains images with the same label as folder name. To that end we have to download MNIST csv dataset and do some preprocessing. At first we split train into train/validation (5 % -> 57000 train 3000 validation). Then we have to convert our downloaded files to normal images and save each class in appropriate directory.
 
 ## 2. main
 
