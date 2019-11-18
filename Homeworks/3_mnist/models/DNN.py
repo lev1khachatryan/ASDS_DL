@@ -223,8 +223,8 @@ class DNN(BaseNN):
         self.h_fc1_drop_tf = tf.nn.dropout(self.h_fc1_tf, self.keep_prob_tf, name = 'h_fc1_drop_tf')
 
         # 5.layer: fully connected
-        self.W_fc2_tf = self.weight_variable([self.n_n_fc1, 10], name = 'W_fc2_tf')
-        self.b_fc2_tf = self.bias_variable([10], name = 'b_fc2_tf')
+        self.W_fc2_tf = self.weight_variable([self.n_n_fc1, self.data_loader.num_classes], name = 'W_fc2_tf')
+        self.b_fc2_tf = self.bias_variable([self.data_loader.num_classes], name = 'b_fc2_tf')
         
         self.z_pred_tf = tf.add(tf.matmul(self.h_fc1_drop_tf, self.W_fc2_tf), self.b_fc2_tf, name = 'z_pred_tf')# => (.,10)
 
