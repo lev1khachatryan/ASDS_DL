@@ -26,13 +26,15 @@ def main():
 	IMG_WIDTH = int(config['image_shape']['IMG_WIDTH'])
 	IMG_HEIGHT = int(config['image_shape']['IMG_HEIGHT'])
 
+	PERCENT_OF_VALSET = float(config['other']['PERCENT_OF_VALSET'])
+
 	print('From Train data to Train - Validation')
 	train = pd.read_csv(TRAIN_TEST_PATH_CSV + TRAIN_CSV_NAME)
 
 	y = train.iloc[:, :1]
 	X = train.drop(columns=['label'])
 	
-	X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.05, random_state=22, shuffle=True)
+	X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=PERCENT_OF_VALSET, random_state=22, shuffle=True)
 	
 	Train = pd.concat([y_train, X_train], axis=1)
 	Validation = pd.concat([y_val, X_val], axis=1)
