@@ -32,7 +32,7 @@ def main():
 	y = train.iloc[:, :1]
 	X = train.drop(columns=['label'])
 	
-	X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.20, random_state=22, shuffle=True)
+	X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.05, random_state=22, shuffle=True)
 	
 	Train = pd.concat([y_train, X_train], axis=1)
 	Validation = pd.concat([y_val, X_val], axis=1)
