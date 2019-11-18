@@ -47,6 +47,7 @@ def main():
 	    'horizontal_flip': horizontal_flip
 	}
 
+	print('------------------Train set augmentation started')
 	subFolderList = []
 	for x in os.listdir(TRAIN_PATH_IMAGE):
 	    if os.path.isdir(TRAIN_PATH_IMAGE + '/' + x):
@@ -86,6 +87,50 @@ def main():
 	        # write image to the disk
 	        io.imsave(new_file_path, transformed_image)
 	        num_generated_files += 1
+
+	print('------------------Train set augmentation finished')
+
+	print('------------------Validation set augmentation started')
+	subFolderList = []
+	for x in os.listdir(VALIDATION_PATH_IMAGE):
+	    if os.path.isdir(VALIDATION_PATH_IMAGE + '/' + x):
+	        subFolderList.append(x)
+
+	dict = {}
+	for x in subFolderList:
+	    all_files = [y for y in os.listdir(VALIDATION_PATH_IMAGE + x) if '.png' in y]
+	    dict[VALIDATION_PATH_IMAGE + x] = len(all_files)
+
+	for k, v in dict.items():
+	    folder_path = k
+	    num_files_desired = int(np.round( v * PERCENT_TO_AUGMENT))
+	    
+	    # find all files paths from the folder
+	    images = [os.path.join(folder_path, f) for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+	    
+	    num_generated_files = 0
+	    while num_generated_files <= num_files_desired:
+	        # random image from the folder
+	        image_pat = random.choice(images)
+	        # read image as an two dimensional array of pixels
+	        image_to_transform = sk.io.imread(image_pat)
+	        # random num of transformation to apply
+	        num_transformations_to_apply = random.randint(1, len(available_transformations))
+
+	        num_transformations = 0
+	        transformed_image = None
+	        while num_transformations <= num_transformations_to_apply:
+	            # random transformation to apply for a single image
+	            key = random.choice(list(available_transformations))
+	            transformed_image = available_transformations[key](image_to_transform)
+	            num_transformations += 1
+
+	        new_file_path = '%s/augmented_image_%s.png' % (folder_path, num_generated_files)
+
+	        # write image to the disk
+	        io.imsave(new_file_path, transformed_image)
+	        num_generated_files += 1
+	print('------------------Validation set augmentation finished')
 
 if __name__ == "__main__":
     main()
