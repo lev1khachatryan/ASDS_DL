@@ -122,7 +122,7 @@ class DNN(BaseNN):
         self.b_fc2_tf = graph.get_tensor_by_name("b_fc2_tf:0")
         
         # activation tensors
-        self.h_conv1_tf = graph.get_tensor_by_name('h_conv1_tf:0')  
+        self.h_conv1_tf = graph.get_tensor_by_name('h_conv1_tf:0')
         self.h_pool1_tf = graph.get_tensor_by_name('h_pool1_tf:0')
         self.h_conv2_tf = graph.get_tensor_by_name('h_conv2_tf:0')
         self.h_pool2_tf = graph.get_tensor_by_name('h_pool2_tf:0')
