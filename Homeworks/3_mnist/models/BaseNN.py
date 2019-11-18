@@ -162,7 +162,8 @@ class BaseNN:
                     self.n_log_step += 1 # for logging the results
                     train_summary = sess.run(self.merged, feed_dict={self.x_data_tf: x_batch, 
                                                                     self.y_data_tf: y_batch, 
-                                                                    self.keep_prob_tf: 1.0})
+                                                                    self.keep_prob_tf: 1.0
+                                                                    })
                     valid_summary = sess.run(self.merged, feed_dict = feed_dict_valid)
                     self.train_writer.add_summary(train_summary, self.n_log_step)
                     self.valid_writer.add_summary(valid_summary, self.n_log_step)
@@ -270,7 +271,7 @@ class BaseNN:
         """
         y_pred_proba = self.y_pred_proba_tf.eval(session = sess, 
                                                  feed_dict = {self.x_data_tf: x_data,
-                                                              self.keep_prob_tf: 1.0})
+                                                              self.keep_prob_tf: 1.0 })
         return y_pred_proba
     
     def load_session_from_file(self, filename):
