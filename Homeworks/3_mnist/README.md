@@ -2,7 +2,7 @@
 
 ***repo consists of 6 parts:***
 
-* csv to image
+* data preparation
 
 * main.py
 
@@ -14,9 +14,23 @@
 
 * DNN.py
 
-## 1. csv to image
+## 1. data preparation
 
-For generalization we must assume that our data consists of images saved in corresponding folders, where each folder contains images with the same label as folder name. To that end we have to download MNIST csv dataset and do some preprocessing. At first we split train into train/validation (5 % -> 57000 train 3000 validation). Then we have to convert our downloaded files to normal images and save each class in appropriate directory.
+This part consists of 3 parts
+
+### 1.1 data normalization
+
+This script loads train/test csv's, applies standard normalization to them and save in the same directory.
+All necessary parameters was taken from config.INI file.
+
+### 1.2 csv to image
+
+For generalization we must assume that our data consists of images saved in corresponding folders, where each folder contains images with the same label as folder name. To that end we have to download MNIST csv dataset and do some preprocessing. At first we split train into train/validation (10 % -> 54000 train 6000 validation). Then we have to convert our downloaded files to normal images and save each class in appropriate directory.
+
+### 1.3 data augmentation
+
+Load images from directory, applies one of three transformations (rotation, noise adding and horizontal flipping).
+All necessary parameters was taken from config.INI file.
 
 ## 2. main
 
@@ -116,7 +130,7 @@ Here we have DNN class, which inherits from BaseNN class. ***network*** and ***m
 
 # Results
 
-After ***83*** epochs, with the following parameters, Test Accuracy was ***98.95 % ***
+After ***34*** epochs, with the following parameters, Test Accuracy was ***99.26 % ***
 
 ![](_assets/prediction.png)
 
