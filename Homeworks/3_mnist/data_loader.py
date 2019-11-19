@@ -51,6 +51,8 @@ class DataLoader:
         imgs = np.array(ims)
         imgs = imgs.reshape(-1, self.height_of_image, self.width_of_image, self.num_channels)
 
+        imgs = imgs / imgs.max()
+
         return imgs, np.array(lbls)
 
     def train_data_loader(self, index, randomization = False):
