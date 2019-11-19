@@ -27,7 +27,6 @@ def normalize_data(data):
         dataframe or matrix_like (normalized data)
     --------------
     """
-    # scale features using statistics that are robust to outliers
     #rs = sklearn.preprocessing.RobustScaler()
     #rs.fit(data)
     #data = rs.transform(data)
