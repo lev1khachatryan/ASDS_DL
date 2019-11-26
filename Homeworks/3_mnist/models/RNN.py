@@ -11,7 +11,7 @@ class RNN(BaseNN):
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
                  num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob)
 
-        self.num_hidden = 64 # hidden layer num of features
+        self.num_hidden = 512 # hidden layer num of features
 
     def weight_variable(self, shape, name = None):
         """
@@ -136,11 +136,11 @@ class RNN(BaseNN):
         -----------------
         """
 
-        self.W = self.weight_variable([self.num_hidden, self.data_loader.num_classes], name = 'W') # (28, 10)
+        self.W = self.weight_variable([self.num_hidden, self.data_loader.num_classes], name = 'W') # (?, 10)
         self.b = self.bias_variable([self.data_loader.num_classes], name = 'b') # (10)
 
         x_reshaped = tf.reshape(X, [-1, self.data_loader.width_of_image, self.data_loader.height_of_image]) # (., 28, 28)
-        x_unstacked = tf.unstack(x_reshaped, self.data_loader.width_of_image, 1) # (., 28)
+        x_unstacked = tf.unstack(x_reshaped, self.data_loader.width_of_image, 1) # (?, 28)
 
         self.lstm_cell = rnn.BasicLSTMCell(self.num_hidden, forget_bias=1.0, name = 'lstm_cell')
         self.keep_prob_tf = tf.placeholder(dtype=tf.float32, name = 'keep_prob_tf')
