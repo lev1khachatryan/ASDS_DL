@@ -54,7 +54,7 @@ class BaseNN:
             self.cross_entropy_tf, name = 'train_step_tf')
 
         # predicted probabilities in one-hot encoding
-        self.y_pred_proba_tf = tf.nn.softmax(self.z_pred_tf, name='y_pred_proba_tf') 
+        self.y_pred_proba_tf = tf.nn.softmax(self.z_pred_tf, name='y_pred_proba_tf')
         
         # tensor of correct predictions
         self.y_pred_correct_tf = tf.equal(tf.argmax(self.y_pred_proba_tf, 1),
