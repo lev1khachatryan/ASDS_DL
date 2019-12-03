@@ -120,15 +120,10 @@ Tensorflow Speech Recognition Challenge was a Kaggle competition organised by Go
 
 ### Models used
 
-1. A variant of Convolutional LSTM (https://arxiv.org/pdf/1610.00277.pdf)
-2. LSTM-L (https://arxiv.org/pdf/1711.07128.pdf)
-3. C-RNN (https://arxiv.org/pdf/1711.07128.pdf)
-4. GRU-L (https://arxiv.org/pdf/1711.07128.pdf)
-5. Resnet
 
 ### Prediction
 
-The final model was a ensemble 13 models. Weighted Averaging and Stacking was used to generate the final predictions.
+
 
 ### Aknowledgements
 
