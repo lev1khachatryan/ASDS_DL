@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
-from mlfromscratch.utils import accuracy_score
-from mlfromscratch.deep_learning.activation_functions import Sigmoid
+from dl_fromscratch.utils import accuracy_score
+from dl_fromscratch.deep_learning.activation_functions import Sigmoid
 
 class Loss(object):
     def loss(self, y_true, y_pred):

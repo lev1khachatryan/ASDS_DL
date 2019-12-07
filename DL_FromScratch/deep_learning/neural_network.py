@@ -2,8 +2,8 @@ from __future__ import print_function, division
 from terminaltables import AsciiTable
 import numpy as np
 import progressbar
-from mlfromscratch.utils import batch_iterator
-from mlfromscratch.utils.misc import bar_widgets
+from dl_fromscratch.utils import batch_iterator
+from dl_fromscratch.utils.misc import bar_widgets
 
 
 class NeuralNetwork():
