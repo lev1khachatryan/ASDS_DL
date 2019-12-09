@@ -1,2 +1,2 @@
-model_checkpoint_path: "C:\\_Files\\MyProjects\\ASDS_3\\ASDS_DL\\Homeworks\\3_mnist\\results\\RNN_new\\checkpoints\\RNN_new"
-all_model_checkpoint_paths: "C:\\_Files\\MyProjects\\ASDS_3\\ASDS_DL\\Homeworks\\3_mnist\\results\\RNN_new\\checkpoints\\RNN_new"
+model_checkpoint_path: "/home/student/Desktop/LKH_DoNotTouch/ASDS_DL/Homeworks/3_mnist/results/RNN_0912/checkpoints/RNN_0912"
+all_model_checkpoint_paths: "/home/student/Desktop/LKH_DoNotTouch/ASDS_DL/Homeworks/3_mnist/results/RNN_0912/checkpoints/RNN_0912"
