@@ -11,7 +11,7 @@ class RNN(BaseNN):
                  val_batch_size, test_batch_size, height_of_image, width_of_image, num_channels, 
                  num_classes, learning_rate, base_dir, max_to_keep, model_name, keep_prob)
 
-        self.num_hidden = 512 # hidden layer num of features
+        self.num_hidden = 256 # hidden layer num of features
 
     def weight_variable(self, shape, name = None):
         """
