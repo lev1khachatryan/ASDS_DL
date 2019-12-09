@@ -28,7 +28,8 @@ class DataLoader:
 
     def load_image(self, path, is_flattened = False):
         im = np.asarray(Image.open(path))
-        lbl = np.eye(self.num_classes)[int(path.rsplit('\\', 2)[-2])]
+        # lbl = np.eye(self.num_classes)[int(path.rsplit('\\', 2)[-2])]
+        lbl = np.eye(self.num_classes)[int(path.rsplit('/', 2)[-2])]
 
         if is_flattened:
             im = im.reshape(self.height_of_image * self.width_of_image)
