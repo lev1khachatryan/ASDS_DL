@@ -12,7 +12,6 @@ python tensorflow/examples/speech_commands/label_wav.py \
 --graph=/tmp/my_frozen_graph.pb \
 --labels=/tmp/speech_commands_train/conv_labels.txt \
 --wav=/tmp/speech_dataset/left/a5d485dc_nohash_0.wav
-
 """
 from __future__ import absolute_import
 from __future__ import division
