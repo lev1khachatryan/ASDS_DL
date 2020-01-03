@@ -10,8 +10,8 @@ def main():
 	config = configparser.ConfigParser()
 	config.read('../config.INI')
 
-	data_dir = config['generate sample']['DATA_DIR']
-	sample_dir  = config['generate sample']['SAMPLE_DIR']
+	data_dir = config['paths']['DATA_DIR']
+	sample_dir  = config['paths']['SAMPLE_DIR']
 
 	dataset = Dataset(data_dir)
 
