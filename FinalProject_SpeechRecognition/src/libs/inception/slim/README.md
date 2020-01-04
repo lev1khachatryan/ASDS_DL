@@ -625,7 +625,3 @@ def vgg16_pascal(inputs):
     net = slim.ops.fc(net, 21, activation=None, scope='fc8_pascal', restore=False)
   return net
 ```
-
-## Authors
-
-Sergio Guadarrama and Nathan Silberman
