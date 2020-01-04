@@ -52,32 +52,6 @@ def log_specgram(audio, sample_rate, window_size=20,
                                     detrend=False)
     return freqs, times, np.log(spec.T.astype(np.float32) + eps)
 
-def violinplot_frequency(dirs, freq_ind):
-    spec_all = []  # Contain spectrograms
-    ind = 0
-    for direct in dirs:
-        spec_all.append([])
-
-        waves = [f for f in os.listdir(join(train_audio_path, direct)) if
-                 f.endswith('.wav')]
-        for wav in waves[:100]:
-            sample_rate, samples = wavfile.read(
-                train_audio_path + direct + '/' + wav)
-            freqs, times, spec = log_specgram(samples, sample_rate)
-            spec_all[ind].extend(spec[:, freq_ind])
-        ind += 1
-
-    # Different lengths = different num of frames. Make number equal
-    minimum = min([len(spec) for spec in spec_all])
-    spec_all = np.array([spec[:minimum] for spec in spec_all])
-
-    plt.figure(figsize=(13,7))
-    plt.title('Frequency ' + str(freqs[freq_ind]) + ' Hz')
-    plt.ylabel('Amount of frequency in a word')
-    plt.xlabel('Words')
-    sns.violinplot(data=pd.DataFrame(spec_all.T, columns=dirs))
-    plt.show()
-
 def wav2img(wav_path, targetdir='', figsize=(4,4)):
     fig = plt.figure(figsize=figsize)    
     # use soundfile library to read in the wave files
