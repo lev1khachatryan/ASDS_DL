@@ -1,4 +1,5 @@
-"""Converts a trained checkpoint into a frozen model for mobile inference.
+"""
+Converts a trained checkpoint into a frozen model for mobile inference.
 Once you've trained a model using the `train.py` script, you can use this tool
 to convert it into a binary GraphDef file that can be loaded into the Android,
 iOS, or Raspberry Pi example code. Here's an example of how to run it:
