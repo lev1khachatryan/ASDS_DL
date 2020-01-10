@@ -19,11 +19,11 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-from matplotlib.backend_bases import RendererBase
+# from matplotlib.backend_bases import RendererBase
 import matplotlib.pyplot as plt
 import seaborn as sns
-import IPython.display as ipd
-import librosa.display
+# import IPython.display as ipd
+# import librosa.display
 import plotly.offline as py
 import plotly.graph_objs as go
 import plotly.tools as tls
