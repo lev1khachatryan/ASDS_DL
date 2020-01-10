@@ -114,7 +114,7 @@ def label_wav_batched(files_list,labels_list,graph,batch_size=10):
             #We need this fix because many models support only fixed batch sizes
             if batch_len<batch_size:
                 mfcc_values=np.concatenate([mfcc_values,np.zeros([batch_size-batch_len,mfcc_values.shape[1]])],axis=0)
-            predictions = sess.run(softmax_tensor, {'fingerprint_input:0': mfcc_values})
+            predictions = sess.run(softmax_tensor, {'data_input:0': mfcc_values})
             
             all_predictions.append(predictions)
             
@@ -149,7 +149,7 @@ def label_mfcc_batched(mfcc,labels_list,graph,batch_size=10):
             #We need this fix because many models support only fixed batch sizes
             if batch_len<batch_size:
                 mfcc_values=np.concatenate([mfcc_values,np.zeros([batch_size-batch_len,mfcc_values.shape[1]])],axis=0)
-            predictions = sess.run(softmax_tensor, {'fingerprint_input:0': mfcc_values})
+            predictions = sess.run(softmax_tensor, {'data_input:0': mfcc_values})
             
             all_predictions.append(predictions)
             
