@@ -75,7 +75,7 @@ def train(sess, logits, data_input, ground_truth_input, get_train_data, get_val_
     if(summaries_dir!=None):
         train_writer = tf.summary.FileWriter(summaries_dir + '/%s_train' % model_name,
                                          sess.graph)
-        validation_writer = tf.summary.FileWriter(summaries_dir + '/%svalidation' % model_name)
+        validation_writer = tf.summary.FileWriter(summaries_dir + '/%s_validation' % model_name)
     tf.global_variables_initializer().run()
 
     start_step = 1
