@@ -48,30 +48,30 @@ def prepare_model_settings(label_count, sample_rate, clip_duration_ms,
         spectrogram_length = 0
     else:
         spectrogram_length = 1 + int(length_minus_window / window_stride_samples)
-    fingerprint_size = dct_coefficient_count * spectrogram_length
+    data_size = dct_coefficient_count * spectrogram_length
     return {
         'desired_samples': desired_samples,
         'window_size_samples': window_size_samples,
         'window_stride_samples': window_stride_samples,
         'spectrogram_length': spectrogram_length,
         'dct_coefficient_count': dct_coefficient_count,
-        'fingerprint_size': fingerprint_size,
+        'data_size': data_size,
         'label_count': label_count,
         'sample_rate': sample_rate,
     }
 
 
-def create_model(fingerprint_input, model_settings, model_architecture,
+def create_model(data_input, model_settings, model_architecture,
                  is_training, runtime_settings=None,model_size_info=None):
     """Builds a model of the requested architecture compatible with the settings.
   
     There are many possible ways of deriving predictions from a spectrogram
     input, so this function provides an abstract interface for creating different
     kinds of models in a black-box way. You need to pass in a TensorFlow node as
-    the 'fingerprint' input, and this should output a batch of 1D features that
+    the 'data' input, and this should output a batch of 1D features that
     describe the audio. Typically this will be derived from a spectrogram that's
     been run through an MFCC, but in theory it can be any feature vector of the
-    size specified in model_settings['fingerprint_size'].
+    size specified in model_settings['data_size'].
   
     The function will build the graph it needs in the current TensorFlow graph,
     and return the tensorflow output that will contain the 'logits' input to the
@@ -82,7 +82,7 @@ def create_model(fingerprint_input, model_settings, model_architecture,
     requested.
   
     Args:
-      fingerprint_input: TensorFlow node that will output audio feature vectors.
+      data_input: TensorFlow node that will output audio feature vectors.
       model_settings: Dictionary of information about the model.
       model_architecture: String specifying which kind of model to create.
       is_training: Whether the model is going to be used for training.
@@ -96,33 +96,33 @@ def create_model(fingerprint_input, model_settings, model_architecture,
       Exception: If the architecture type isn't recognized.
     """
     if model_architecture == 'single_fc':
-        return create_single_fc_model(fingerprint_input, model_settings,
+        return create_single_fc_model(data_input, model_settings,
                                       is_training)
     elif model_architecture == 'conv':
-        return create_conv_model(fingerprint_input, model_settings, is_training)
+        return create_conv_model(data_input, model_settings, is_training)
     elif model_architecture == 'low_latency_conv':
-        return create_low_latency_conv_model(fingerprint_input, model_settings,
+        return create_low_latency_conv_model(data_input, model_settings,
                                              is_training)
     elif model_architecture == 'low_latency_svdf':
-        return create_low_latency_svdf_model(fingerprint_input, model_settings,
+        return create_low_latency_svdf_model(data_input, model_settings,
                                              is_training, runtime_settings)
     elif model_architecture == 'convlstm':
-        return create_multilayer_convlstm_model(fingerprint_input, model_settings,
+        return create_multilayer_convlstm_model(data_input, model_settings,
                                                 is_training)
     elif model_architecture == 'lstm_l':
-        return create_lstm_l_model(fingerprint_input,model_settings,is_training)
+        return create_lstm_l_model(data_input,model_settings,is_training)
     elif model_architecture == 'ds_cnn':
-        return create_ds_cnn_model(fingerprint_input,model_settings,model_size_info,is_training)
+        return create_ds_cnn_model(data_input,model_settings,model_size_info,is_training)
     elif model_architecture == 'ds_cnn_spec':
-        return create_ds_cnn_model(fingerprint_input,model_settings,model_size_info,is_training)
+        return create_ds_cnn_model(data_input,model_settings,model_size_info,is_training)
     elif model_architecture == 'inception':
-        return create_inception_model(fingerprint_input,model_settings,is_training)
+        return create_inception_model(data_input,model_settings,is_training)
     elif model_architecture == 'c_rnn':
-        return create_crnn_model(fingerprint_input,model_settings,model_size_info,is_training)
+        return create_crnn_model(data_input,model_settings,model_size_info,is_training)
     elif model_architecture=='c_rnn_spec':
-        return create_crnn_model(fingerprint_input,model_settings,model_size_info,is_training)
+        return create_crnn_model(data_input,model_settings,model_size_info,is_training)
     elif model_architecture=='gru':
-        return create_gru_model(fingerprint_input,model_settings,model_size_info,is_training)
+        return create_gru_model(data_input,model_settings,model_size_info,is_training)
     else:
         raise Exception('model_architecture argument "' + model_architecture +
                         '" not recognized, should be one of "single_fc", "conv",' +
@@ -140,7 +140,7 @@ def load_variables_from_checkpoint(sess, start_checkpoint):
     saver.restore(sess, start_checkpoint)
 
     
-def create_gru_model(fingerprint_input, model_settings, model_size_info, 
+def create_gru_model(data_input, model_settings, model_size_info, 
                        is_training):
   """Builds a model with multi-layer GRUs
   model_size_info: [number of GRU layers, number of GRU cells per layer]
@@ -151,7 +151,7 @@ def create_gru_model(fingerprint_input, model_settings, model_size_info,
     dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
   input_frequency_size = model_settings['dct_coefficient_count']
   input_time_size = model_settings['spectrogram_length']
-  fingerprint_4d = tf.reshape(fingerprint_input,
+  data_4d = tf.reshape(data_input,
                               [-1, input_time_size, input_frequency_size])
 
   num_classes = model_settings['label_count']
@@ -178,11 +178,11 @@ def create_gru_model(fingerprint_input, model_settings, model_size_info,
   if bidirectional:
     outputs, output_state_fw, output_state_bw = \
       tf.contrib.rnn.stack_bidirectional_dynamic_rnn(gru_cell_fw, gru_cell_bw, 
-      fingerprint_4d, dtype=tf.float32)
+      data_4d, dtype=tf.float32)
     flow = outputs[:, -1, :]
   else:
     cells = tf.contrib.rnn.MultiRNNCell(gru_cell_fw)
-    _, last = tf.nn.dynamic_rnn(cell=cells, inputs=fingerprint_4d, 
+    _, last = tf.nn.dynamic_rnn(cell=cells, inputs=data_4d, 
                 dtype=tf.float32)
     flow = last[-1]
 
@@ -198,7 +198,7 @@ def create_gru_model(fingerprint_input, model_settings, model_size_info,
     return logits
 
 
-def create_inception_model(fingerprint_input,model_settings,is_training):
+def create_inception_model(data_input,model_settings,is_training):
     """
     Create a Resnet Model
     """
@@ -207,16 +207,16 @@ def create_inception_model(fingerprint_input,model_settings,is_training):
         train_mode_placeholder=tf.placeholder(tf.bool,name='train_mode')
     else:
         train_mode_placeholder=False
-    batch_size = tf.shape(fingerprint_input)[0]
+    batch_size = tf.shape(data_input)[0]
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
     paddings = tf.constant([[0, 0],[0,299-input_time_size],[0,299-input_frequency_size],[0,2]])
-    fingerprint_4d=tf.pad(fingerprint_4d, paddings, "CONSTANT")
+    data_4d=tf.pad(data_4d, paddings, "CONSTANT")
 
     label_count=model_settings['label_count']
-    logits,_=inception_model.inception_v3(fingerprint_4d,
+    logits,_=inception_model.inception_v3(data_4d,
                  dropout_keep_prob=0.8,
                  num_classes=label_count,
                  is_training=True,
@@ -227,7 +227,7 @@ def create_inception_model(fingerprint_input,model_settings,is_training):
     else:
         return logits
 
-def create_single_fc_model(fingerprint_input, model_settings, is_training):
+def create_single_fc_model(data_input, model_settings, is_training):
     """Builds a model with a single hidden fully-connected layer.
   
     This is a very simple model with just one matmul and bias layer. As you'd
@@ -236,7 +236,7 @@ def create_single_fc_model(fingerprint_input, model_settings, is_training):
   
     Here's the layout of the graph:
   
-    (fingerprint_input)
+    (data_input)
             v
         [MatMul]<-(weights)
             v
@@ -244,7 +244,7 @@ def create_single_fc_model(fingerprint_input, model_settings, is_training):
             v
   
     Args:
-      fingerprint_input: TensorFlow node that will output audio feature vectors.
+      data_input: TensorFlow node that will output audio feature vectors.
       model_settings: Dictionary of information about the model.
       is_training: Whether the model is going to be used for training.
   
@@ -254,19 +254,19 @@ def create_single_fc_model(fingerprint_input, model_settings, is_training):
     """
     if is_training:
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-    fingerprint_size = model_settings['fingerprint_size']
+    data_size = model_settings['data_size']
     label_count = model_settings['label_count']
     weights = tf.Variable(
-        tf.truncated_normal([fingerprint_size, label_count], stddev=0.001))
+        tf.truncated_normal([data_size, label_count], stddev=0.001))
     bias = tf.Variable(tf.zeros([label_count]))
-    logits = tf.matmul(fingerprint_input, weights) + bias
+    logits = tf.matmul(data_input, weights) + bias
     if is_training:
         return logits, dropout_prob
     else:
         return logits
 
 
-def create_conv_model(fingerprint_input, model_settings, is_training):
+def create_conv_model(data_input, model_settings, is_training):
     """Builds a standard convolutional model.
   
     This is roughly the network labeled as 'cnn-trad-fpool3' in the
@@ -275,7 +275,7 @@ def create_conv_model(fingerprint_input, model_settings, is_training):
   
     Here's the layout of the graph:
   
-    (fingerprint_input)
+    (data_input)
             v
         [Conv2D]<-(weights)
             v
@@ -306,7 +306,7 @@ def create_conv_model(fingerprint_input, model_settings, is_training):
     placeholder.
   
     Args:
-      fingerprint_input: TensorFlow node that will output audio feature vectors.
+      data_input: TensorFlow node that will output audio feature vectors.
       model_settings: Dictionary of information about the model.
       is_training: Whether the model is going to be used for training.
   
@@ -318,7 +318,7 @@ def create_conv_model(fingerprint_input, model_settings, is_training):
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
     first_filter_width = 8
     first_filter_height = 20
@@ -328,7 +328,7 @@ def create_conv_model(fingerprint_input, model_settings, is_training):
             [first_filter_height, first_filter_width, 1, first_filter_count],
             stddev=0.01))
     first_bias = tf.Variable(tf.zeros([first_filter_count]))
-    first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [1, 1, 1, 1],
+    first_conv = tf.nn.conv2d(data_4d, first_weights, [1, 1, 1, 1],
                               'SAME') + first_bias
     first_relu = tf.nn.relu(first_conv)
     if is_training:
@@ -401,7 +401,7 @@ def resCONVLSTM(inputs, model_settings, is_training, name=''):
         return output_relu
 
 
-def create_multilayer_convlstm_model(fingerprint_input, model_settings, is_training):
+def create_multilayer_convlstm_model(data_input, model_settings, is_training):
     """
         Creates a Multilayer ConvLSTM Model Followed by a linear layer and softmax activation function
 
@@ -414,14 +414,14 @@ def create_multilayer_convlstm_model(fingerprint_input, model_settings, is_train
         train_mode_placeholder=tf.placeholder(tf.bool,name='train_mode')
     else:
         train_mode_placeholder=False
-    batch_size = tf.shape(fingerprint_input)[0]
+    batch_size = tf.shape(data_input)[0]
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
     
     # Layer1 resCONVLSTMs
-    resCONVLSTM1 = resCONVLSTM(fingerprint_4d, model_settings, train_mode_placeholder, '1')
+    resCONVLSTM1 = resCONVLSTM(data_4d, model_settings, train_mode_placeholder, '1')
     resCONVLSTM2 = resCONVLSTM(resCONVLSTM1, model_settings, train_mode_placeholder, '2')
     resCONVLSTM3 = resCONVLSTM(resCONVLSTM2, model_settings, train_mode_placeholder, '3')
     resCONVLSTM4= resCONVLSTM(resCONVLSTM3,model_settings,train_mode_placeholder,'4')
@@ -482,7 +482,7 @@ def create_multilayer_convlstm_model(fingerprint_input, model_settings, is_train
 
 
 
-def create_lstm_l_model(fingerprint_input, model_settings, is_training):
+def create_lstm_l_model(data_input, model_settings, is_training):
     """
         Creates a LSTM Large Model with output projection
 
@@ -490,18 +490,18 @@ def create_lstm_l_model(fingerprint_input, model_settings, is_training):
     """
     if is_training:
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
-    batch_size = tf.shape(fingerprint_input)[0]
+    batch_size = tf.shape(data_input)[0]
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
     label_count = model_settings['label_count']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size])
     lstm_cell = tf.contrib.rnn.LSTMCell(500, use_peepholes=True,num_proj=188)
     if is_training:
         lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, input_keep_prob=dropout_prob)
 
     initial_state = lstm_cell.zero_state(batch_size, dtype=tf.float32)
-    _,states = tf.nn.dynamic_rnn(lstm_cell, fingerprint_4d, initial_state=initial_state)
+    _,states = tf.nn.dynamic_rnn(lstm_cell, data_4d, initial_state=initial_state)
 
     lstm_o = states[-1]
 
@@ -517,7 +517,7 @@ def create_lstm_l_model(fingerprint_input, model_settings, is_training):
         return final_fc
 
 
-def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,
+def create_ds_cnn_model(data_input, model_settings, model_size_info,
                         is_training):
     """Builds a model with depthwise separable convolutional neural network
     Model definition is based on https://arxiv.org/abs/1704.04861 and
@@ -574,7 +574,7 @@ def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
 
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
   
     t_dim = input_time_size
@@ -615,7 +615,7 @@ def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,
                                 activation_fn=tf.nn.relu):
                 for layer_no in range(0, num_layers):
                     if layer_no == 0:
-                        net = slim.convolution2d(fingerprint_4d, conv_feat[layer_no], \
+                        net = slim.convolution2d(data_4d, conv_feat[layer_no], \
                                                  [conv_kt[layer_no], conv_kf[layer_no]],
                                                  stride=[conv_st[layer_no], conv_sf[layer_no]], padding='SAME',
                                                  scope='conv_1')
@@ -639,7 +639,7 @@ def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,
         return logits
 
 
-def create_crnn_model(fingerprint_input, model_settings,
+def create_crnn_model(data_input, model_settings,
                       model_size_info, is_training):
     """Builds a model with convolutional recurrent networks with GRUs
     Based on the model definition in https://arxiv.org/abs/1703.05390
@@ -653,7 +653,7 @@ def create_crnn_model(fingerprint_input, model_settings,
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
 
     layer_norm = False
@@ -671,7 +671,7 @@ def create_crnn_model(fingerprint_input, model_settings,
                                     initializer=tf.contrib.layers.xavier_initializer())
 
     first_bias = tf.Variable(tf.zeros([first_filter_count]))
-    first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [
+    first_conv = tf.nn.conv2d(data_4d, first_weights, [
         1, first_filter_stride_y, first_filter_stride_x, 1
     ], 'VALID') + first_bias
     first_relu = tf.nn.relu(first_conv)
@@ -743,7 +743,7 @@ def create_crnn_model(fingerprint_input, model_settings,
         return final_fc
 
 
-def create_low_latency_conv_model(fingerprint_input, model_settings,
+def create_low_latency_conv_model(data_input, model_settings,
                                   is_training):
     """Builds a convolutional model with low compute requirements.
   
@@ -753,7 +753,7 @@ def create_low_latency_conv_model(fingerprint_input, model_settings,
   
     Here's the layout of the graph:
   
-    (fingerprint_input)
+    (data_input)
             v
         [Conv2D]<-(weights)
             v
@@ -781,7 +781,7 @@ def create_low_latency_conv_model(fingerprint_input, model_settings,
     placeholder.
   
     Args:
-      fingerprint_input: TensorFlow node that will output audio feature vectors.
+      data_input: TensorFlow node that will output audio feature vectors.
       model_settings: Dictionary of information about the model.
       is_training: Whether the model is going to be used for training.
   
@@ -793,7 +793,7 @@ def create_low_latency_conv_model(fingerprint_input, model_settings,
         dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    fingerprint_4d = tf.reshape(fingerprint_input,
+    data_4d = tf.reshape(data_input,
                                 [-1, input_time_size, input_frequency_size, 1])
     first_filter_width = 8
     first_filter_height = input_time_size
@@ -805,7 +805,7 @@ def create_low_latency_conv_model(fingerprint_input, model_settings,
             [first_filter_height, first_filter_width, 1, first_filter_count],
             stddev=0.01))
     first_bias = tf.Variable(tf.zeros([first_filter_count]))
-    first_conv = tf.nn.conv2d(fingerprint_4d, first_weights, [
+    first_conv = tf.nn.conv2d(data_4d, first_weights, [
         1, first_filter_stride_y, first_filter_stride_x, 1
     ], 'VALID') + first_bias
     first_relu = tf.nn.relu(first_conv)
@@ -855,7 +855,7 @@ def create_low_latency_conv_model(fingerprint_input, model_settings,
         return final_fc
 
 
-def create_low_latency_svdf_model(fingerprint_input, model_settings,
+def create_low_latency_svdf_model(data_input, model_settings,
                                   is_training, runtime_settings):
     """Builds an SVDF model with low compute requirements.
   
@@ -865,7 +865,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
   
     Here's the layout of the graph:
   
-    (fingerprint_input)
+    (data_input)
             v
           [SVDF]<-(weights)
             v
@@ -893,7 +893,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
     placeholder.
   
     Args:
-      fingerprint_input: TensorFlow node that will output audio feature vectors.
+      data_input: TensorFlow node that will output audio feature vectors.
       The node is expected to produce a 2D Tensor of shape:
         [batch, model_settings['dct_coefficient_count'] *
                 model_settings['spectrogram_length']]
@@ -917,7 +917,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
     input_time_size = model_settings['spectrogram_length']
 
     # Validation.
-    input_shape = fingerprint_input.get_shape()
+    input_shape = data_input.get_shape()
     if len(input_shape) != 2:
         raise ValueError('Inputs to `SVDF` should have rank == 2.')
     if input_shape[-1].value is None:
@@ -925,7 +925,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
                          'should be defined. Found `None`.')
     if input_shape[-1].value % input_frequency_size != 0:
         raise ValueError('Inputs feature dimension %d must be a multiple of '
-                         'frame size %d', fingerprint_input.shape[-1].value,
+                         'frame size %d', data_input.shape[-1].value,
                          input_frequency_size)
 
     # Set number of units (i.e. nodes) and rank.
@@ -940,7 +940,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
     # Determine the number of new frames in the input, such that we only operate
     # on those. For training we do not use the memory, and thus use all frames
     # provided in the input.
-    # new_fingerprint_input: [batch, num_new_frames*input_frequency_size]
+    # new_data_input: [batch, num_new_frames*input_frequency_size]
     if is_training:
         num_new_frames = input_time_size
     else:
@@ -950,10 +950,10 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
             tf.equal(tf.count_nonzero(memory), 0),
             lambda: input_time_size,
             lambda: int(runtime_settings['clip_stride_ms'] / window_stride_ms))
-    new_fingerprint_input = fingerprint_input[
+    new_data_input = data_input[
                             :, -num_new_frames * input_frequency_size:]
     # Expand to add input channels dimension.
-    new_fingerprint_input = tf.expand_dims(new_fingerprint_input, 2)
+    new_data_input = tf.expand_dims(new_data_input, 2)
 
     # Create the frequency filters.
     weights_frequency = tf.Variable(
@@ -964,7 +964,7 @@ def create_low_latency_svdf_model(fingerprint_input, model_settings,
     # Convolve the 1D feature filters sliding over the time dimension.
     # activations_time: [batch, num_new_frames, num_filters]
     activations_time = tf.nn.conv1d(
-        new_fingerprint_input, weights_frequency, input_frequency_size, 'VALID')
+        new_data_input, weights_frequency, input_frequency_size, 'VALID')
     # Rearrange such that we can perform the batched matmul.
     # activations_time: [num_filters, batch, num_new_frames]
     activations_time = tf.transpose(activations_time, perm=[2, 0, 1])
