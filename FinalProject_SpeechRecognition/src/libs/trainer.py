@@ -13,7 +13,7 @@ from six.moves import xrange
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, get_val_data,
+def train(sess, logits, data_input, ground_truth_input, get_train_data, get_val_data,
           training_steps, learning_rate, eval_step_interval, logging_interval=10, start_checkpoint=None,
           checkpoint_interval=None, model_name='', train_dir=None, summaries_dir=None, dropout=0.5, args=()):
     """
@@ -22,10 +22,10 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
     Args:
         sess: A tensorflow session object
         logits: The output logits of the tf graph to which loss function will be applied
-        fingerprint_input: A tensorflow placeholder for feeding the input data. Shape of (None, input size)
+        data_input: A tensorflow placeholder for feeding the input data. Shape of (None, input size)
         ground_truth_input: A tensorflow placeholder for feeding the actual truth labels. Shape of (None, labels count)
-        get_train_data: Function that returns the training data as tuple of train_fingerprints, train_ground_truth
-        get_val_data: Function that returns the validation data as tuple of val_fingerprints, val_ground_truth
+        get_train_data: Function that returns the training data as tuple of train_data, train_ground_truth
+        get_val_data: Function that returns the validation data as tuple of val_data, val_ground_truth
         training_steps: Training steps seperated by comma 
         learning_rate: Learning rates seperated by comma
         logging_interval: After how many steps to log output. Default is 10.
@@ -39,6 +39,7 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
     Returns:
          None
     """
+    
     # Modify here to get the required varibales in the training function.
     dropout_prob, label_count, batch_size, val_size = args
 
@@ -102,9 +103,9 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
                 break
         # Pull the audio samples we'll use for training.
         # Modify here to pass whatever argument is required.
-        train_fingerprints, train_ground_truth = get_train_data(sess)
+        train_data, train_ground_truth = get_train_data(sess)
         feed_dict={
-                fingerprint_input: train_fingerprints,
+                data_input: train_data,
                 ground_truth_input: train_ground_truth,
                 learning_rate_input: learning_rate_value,
                 dropout_prob: dropout,
@@ -133,12 +134,12 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
             for i in xrange(0, val_size, batch_iter):
                 # Modify here as required
                 fun_args = (sess, i)
-                validation_fingerprints, validation_ground_truth = (
+                validation_data, validation_ground_truth = (
                     get_val_data(fun_args))
                 # Run a validation step and capture training summaries for TensorBoard
                 # with the `merged` op.
                 feed_dict={
-                        fingerprint_input: validation_fingerprints,
+                        data_input: validation_data,
                         ground_truth_input: validation_ground_truth,
                         dropout_prob: 1.0,
                     }
@@ -174,16 +175,16 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
     return total_accuracy
 
 
-def eval_test(sess, logits, fingerprint_input, ground_truth_input, get_test_data, checkpoint_file, args=()):
+def eval_test(sess, logits, data_input, ground_truth_input, get_test_data, checkpoint_file, args=()):
     """
     Universal Test Evaluator function
     
     Args:
         sess: A tensorflow session object
         logits: The output logits of the tf graph to which loss function will be applied
-        fingerprint_input: A tensorflow placeholder for feeding the input data. Shape of (None, input size)
+        data_input: A tensorflow placeholder for feeding the input data. Shape of (None, input size)
         ground_truth_input: A tensorflow placeholder for feeding the actual truth labels. Shape of (None, labels count)
-        get_test_data: Function that returns the test data as tuple of test_fingerprints, test_ground_truth
+        get_test_data: Function that returns the test data as tuple of test_data, test_ground_truth
         checkpoint_file: The checkpoint file to use for test evaluation
         args: Tuple of args. dropout_prob,label_count,batch_size,val_size   
     Returns:
@@ -208,14 +209,14 @@ def eval_test(sess, logits, fingerprint_input, ground_truth_input, get_test_data
     for i in xrange(0, test_size, batch_iter):
         # Modify here as required
         fun_args = (sess, i)
-        validation_fingerprints, validation_ground_truth = (
+        validation_data, validation_ground_truth = (
             get_test_data(fun_args))
         # Run a validation step and capture training summaries for TensorBoard
         # with the `merged` op.
         test_accuracy, conf_matrix = sess.run(
             [evaluation_step, confusion_matrix],
             feed_dict={
-                fingerprint_input: validation_fingerprints,
+                data_input: validation_data,
                 ground_truth_input: validation_ground_truth,
             })
         batch_iter = min(batch_iter, test_size - i)
