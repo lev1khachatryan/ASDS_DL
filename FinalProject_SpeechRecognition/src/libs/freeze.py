@@ -1,5 +1,5 @@
 """
-Converts a trained checkpoint into a frozen model for mobile inference.
+Converts a trained checkpoint into a frozen model for inference.
 Once you've trained a model using the `train.py` script, you can use this tool
 to convert it into a binary GraphDef file that can be loaded into the Android,
 iOS, or Raspberry Pi example code. Here's an example of how to run it:
@@ -63,14 +63,14 @@ def create_inference_graph(wanted_words, sample_rate, clip_duration_ms,
         window_size=model_settings['window_size_samples'],
         stride=model_settings['window_stride_samples'],
         magnitude_squared=True)
-    fingerprint_input = contrib_audio.mfcc(
+    data_input = contrib_audio.mfcc(
         spectrogram,
         decoded_sample_data.sample_rate,
         dct_coefficient_count=dct_coefficient_count)
-    fingerprint_frequency_size = model_settings['dct_coefficient_count']
-    fingerprint_time_size = model_settings['spectrogram_length']
-    reshaped_input = tf.reshape(fingerprint_input, [
-        -1, fingerprint_time_size * fingerprint_frequency_size
+    data_frequency_size = model_settings['dct_coefficient_count']
+    data_time_size = model_settings['spectrogram_length']
+    reshaped_input = tf.reshape(data_input, [
+        -1, data_time_size * data_frequency_size
     ])
 
     logits = models.create_model(
@@ -79,7 +79,6 @@ def create_inference_graph(wanted_words, sample_rate, clip_duration_ms,
     # Create an output to use for inference.
     tf.nn.softmax(logits, name='labels_softmax')
 
-    
 def create_inference_graph_batched(wanted_words, sample_rate, clip_duration_ms,
                            window_size_ms, window_stride_ms,
                            dct_coefficient_count, model_architecture,model_size_info=None):
@@ -103,7 +102,7 @@ def create_inference_graph_batched(wanted_words, sample_rate, clip_duration_ms,
         window_stride_ms, dct_coefficient_count)
     if(model_architecture=='dnc'):
         model_settings['batch_size']=1000
-    fingerprint_size = model_settings['fingerprint_size']
+    data_size = model_settings['data_size']
     #Wav Data Placeholder
     wav_data_placeholder = tf.placeholder(tf.string, [], name='wav_data')
     decoded_sample_data = contrib_audio.decode_wav(
@@ -121,14 +120,14 @@ def create_inference_graph_batched(wanted_words, sample_rate, clip_duration_ms,
         decoded_sample_data.sample_rate,
         dct_coefficient_count=dct_coefficient_count,name='mfcc')
     #Batched Input Placeholder
-    fingerprint_input = tf.placeholder(
-      tf.float32, [None, fingerprint_size], name='fingerprint_input')
+    data_input = tf.placeholder(
+      tf.float32, [None, data_size], name='data_input')
     
-    fingerprint_frequency_size = model_settings['dct_coefficient_count']
-    fingerprint_time_size = model_settings['spectrogram_length']
+    data_frequency_size = model_settings['dct_coefficient_count']
+    data_time_size = model_settings['spectrogram_length']
     
-    reshaped_input = tf.reshape(fingerprint_input, [
-        -1, fingerprint_time_size * fingerprint_frequency_size
+    reshaped_input = tf.reshape(data_input, [
+        -1, data_time_size * data_frequency_size
     ])
 
     logits = models.create_model(
@@ -136,9 +135,6 @@ def create_inference_graph_batched(wanted_words, sample_rate, clip_duration_ms,
 
     # Create an output to use for inference.
     tf.nn.softmax(logits, name='labels_softmax')
-
-
-
     
 def freeze_graph(FLAGS, model_architecture, checkpoint_file, output_file,model_size_info=None,batched=False):
     tf.reset_default_graph()
