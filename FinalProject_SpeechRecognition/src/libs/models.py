@@ -390,12 +390,16 @@ def resCONVLSTM(inputs, model_settings, is_training, name=''):
         initial_conv1 = conv1.zero_state(batch_size, dtype=tf.float32)
         initial_conv2 = conv2.zero_state(batch_size, dtype=tf.float32)
         conv1_o, _ = tf.nn.dynamic_rnn(conv1, inputs, initial_state=initial_conv1)
+        # bn1 = slim.layers.batch_norm(conv1_o, is_training=is_training,updates_collections=None,decay=0.96,
+        #                                    zero_debias_moving_mean=True,data_format='NCHW')
         bn1 = slim.layers.batch_norm(conv1_o, is_training=is_training,updates_collections=None,decay=0.96,
-                                           zero_debias_moving_mean=True,data_format='NCHW')
+                                           zero_debias_moving_mean=True,data_format='NHWC')
         bn1_relu = tf.nn.relu(bn1)
         conv2_o, _ = tf.nn.dynamic_rnn(conv2, bn1_relu, initial_state=initial_conv2)
+        # bn2 = slim.layers.batch_norm(conv2_o, is_training=is_training,updates_collections=None,decay=0.96,
+        #                                   zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
         bn2 = slim.layers.batch_norm(conv2_o, is_training=is_training,updates_collections=None,decay=0.96,
-                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NHWC')
         residual = tf.add(bn2, inputs)
         output_relu = tf.nn.relu(residual)
         return output_relu
@@ -417,8 +421,7 @@ def create_multilayer_convlstm_model(data_input, model_settings, is_training):
     batch_size = tf.shape(data_input)[0]
     input_frequency_size = model_settings['dct_coefficient_count']
     input_time_size = model_settings['spectrogram_length']
-    data_4d = tf.reshape(data_input,
-                                [-1, input_time_size, input_frequency_size, 1])
+    data_4d = tf.reshape(data_input, [-1, input_time_size, input_frequency_size, 1])
     
     # Layer1 resCONVLSTMs
     resCONVLSTM1 = resCONVLSTM(data_4d, model_settings, train_mode_placeholder, '1')
@@ -432,8 +435,10 @@ def create_multilayer_convlstm_model(data_input, model_settings, is_training):
         lstm1_o,_=tf.nn.dynamic_rnn(lstm_cell1,resCONVLSTM4,initial_state=initial_lstm1)
         lstm1_o=tf.reshape(lstm1_o,[-1, input_time_size, input_frequency_size,1 ])
         nin1_o=tf.layers.conv2d(lstm1_o,1,[1,1],name='nin1')
+        # bn1=slim.layers.batch_norm(nin1_o,is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
+        #                                   zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
         bn1=slim.layers.batch_norm(nin1_o,is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
-                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NHWC')
         bn1=tf.reshape(bn1,[-1,input_time_size,input_frequency_size])
     with tf.variable_scope('lstm2'):
         lstm_cell2=tf.contrib.rnn.LSTMCell(num_units=650,num_proj=input_frequency_size)
@@ -441,8 +446,10 @@ def create_multilayer_convlstm_model(data_input, model_settings, is_training):
         lstm2_o, _ = tf.nn.dynamic_rnn(lstm_cell2, bn1, initial_state=initial_lstm2)
         lstm2_o = tf.reshape(lstm2_o, [-1, input_time_size, input_frequency_size, 1])
         nin2_o = tf.layers.conv2d(lstm2_o, 1, [1, 1], name='nin1')
+        # bn2 = slim.layers.batch_norm(nin2_o, is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
+        #                                   zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
         bn2 = slim.layers.batch_norm(nin2_o, is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
-                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NHWC')
         bn2=tf.reshape(bn2,[-1,input_time_size,input_frequency_size])
 
     # LSTM Layer Final
