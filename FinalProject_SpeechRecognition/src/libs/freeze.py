@@ -1,14 +1,13 @@
 """
 Converts a trained checkpoint into a frozen model for inference.
 Once you've trained a model using the `train.py` script, you can use this tool
-to convert it into a binary GraphDef file that can be loaded into the Android,
-iOS, or Raspberry Pi example code. Here's an example of how to run it:
-bazel run tensorflow/examples/speech_commands/freeze -- \
+to convert it into a binary GraphDef file 
 --sample_rate=16000 --dct_coefficient_count=40 --window_size_ms=20 \
 --window_stride_ms=10 --clip_duration_ms=1000 \
 --model_architecture=conv \
 --start_checkpoint=/tmp/speech_commands_train/conv.ckpt-1300 \
 --output_file=/tmp/my_frozen_graph.pb
+
 One thing to watch out for is that you need to pass in the same arguments for
 `sample_rate` and other command line variables here as you did for the training
 script.
