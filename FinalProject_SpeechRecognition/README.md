@@ -6,9 +6,15 @@ This tutorial will show you how to build a basic speech recognition network that
 
 You should make sure you have TensorFlow installed, and since the script downloads over 1GB of training data, you'll need a good internet connection and enough free space on your machine. The training process itself can take several hours, so make sure you have a machine available for that long.
 
-## Confusion Matrix
+## Training
 
-After four hundred steps, this information will be logged:
+To begin the training process, go to the source tree and run:
+
+```{python}
+python execute_notebook.py
+```
+
+## Confusion Matrix
 
 ```
 I0730 16:57:38.073667   55030 train.py:243] Confusion Matrix:
@@ -27,3 +33,12 @@ I0730 16:57:38.073667   55030 train.py:243] Confusion Matrix:
 ```
 
 The first section is a confusion matrix. To understand what it means, you first need to know the labels being used, which in this case are "silence", "unknown", "yes", "no", "up", "down", "left", "right", "on", "off", "stop", and "go". Each column represents a set of samples that were predicted to be each label, so the first column represents all the clips that were predicted to be silence, the second all those that were predicted to be unknown words, the third "yes", and so on.
+
+Each row represents clips by their correct, ground truth labels. The first row is all the clips that were silence, the second clips that were unknown words, the third "yes", etc.
+
+This matrix can be more useful than just a single accuracy score because it gives a good summary of what mistakes the network is making. In this example you can see that all of the entries in the first row are zero, apart from the initial one. Because the first row is all the clips that are actually silence, this means that none of them were mistakenly labeled as words, so we have no false negatives for silence. This shows the network is already getting pretty good at distinguishing silence from words.
+
+If we look down the first column though, we see a lot of non-zero values. The column represents all the clips that were predicted to be silence, so positive numbers outside of the first cell are errors. This means that some clips of real spoken words are actually being predicted to be silence, so we do have quite a few false positives.
+
+A perfect model would produce a confusion matrix where all of the entries were zero apart from a diagonal line through the center. Spotting deviations from that pattern can help you figure out how the model is most easily confused, and once you've identified the problems you can address them by adding more data or cleaning up categories.
+
