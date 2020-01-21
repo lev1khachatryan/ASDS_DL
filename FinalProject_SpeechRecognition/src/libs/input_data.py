@@ -1,5 +1,5 @@
 """
-All data processing and other necessary functionalities
+Model definitions for simple speech recognition.
 """
 from __future__ import absolute_import
 from __future__ import division
@@ -323,7 +323,7 @@ class AudioProcessor(object):
 
     Creates a graph that loads a WAVE file, decodes it, scales the volume,
     shifts it in time, adds in background noise, calculates a spectrogram, and
-    then builds an MFCC from that.
+    then builds an MFCC fingerprint from that.
 
     This must be called with an active TensorFlow session running, and it
     creates multiple placeholder inputs, and one output:
@@ -334,7 +334,7 @@ class AudioProcessor(object):
       - time_shift_offset_placeholder_: How much to move the clip in time.
       - background_data_placeholder_: PCM sample data for background noise.
       - background_volume_placeholder_: Loudness of mixed-in background.
-      - mfcc_: Output 2D data of processed audio.
+      - mfcc_: Output 2D fingerprint of processed audio.
 
     Args:
       model_settings: Information about the current model being trained.
@@ -367,7 +367,7 @@ class AudioProcessor(object):
     background_add = tf.add(background_mul, sliced_foreground)
     background_clamp = tf.clip_by_value(background_add, -1.0, 1.0)
     self.raw_processed=background_clamp
-    # Run the spectrogram and MFCC ops to get a 2D data of the audio.
+    # Run the spectrogram and MFCC ops to get a 2D 'fingerprint' of the audio.
     self.spectrogram = contrib_audio.audio_spectrogram(
         background_clamp,
         window_size=model_settings['window_size_samples'],
@@ -422,7 +422,7 @@ class AudioProcessor(object):
     else:
       sample_count = max(0, min(how_many, len(candidates) - offset))
     # Data and labels will be populated and returned.
-    data = np.zeros((sample_count, model_settings['data_size']))
+    data = np.zeros((sample_count, model_settings['fingerprint_size']))
     labels = np.zeros((sample_count, model_settings['label_count']))
     desired_samples = model_settings['desired_samples']
     use_background = self.background_data 
