@@ -3,11 +3,11 @@ import os
 import glob
 
 if __name__=='__main__':
-    print('Searching for notebooks in the notebooks directory')
-    if(os.path.isdir('../notebooks')==False):
-        print('Notebook Directory not found! Exiting')
+    print('Searching for notebooks in the training directory')
+    if(os.path.isdir('training')==False):
+        print('training Directory not found! Exiting')
         exit(0)
-    notebooks=glob.glob('../notebooks/*.ipynb')
+    notebooks=glob.glob('training/*.ipynb')
     if(len(notebooks)==0):
         print('No Notebooks found! Exiting.')
         exit(0)
