@@ -14,6 +14,33 @@ To begin the training process, go to the source tree and run:
 python execute_notebook.py
 ```
 
+The script will start off by executing all notebook for training.
+
+Once the training has started, you'll see logging information that looks like this:
+
+```{python}
+I0730 16:53:44.766740   55030 train.py:176] Training from step: 1
+I0730 16:53:47.289078   55030 train.py:217] Step #1: rate 0.001000, accuracy 7.0%, cross entropy 2.611571
+```
+
+This shows that the initialization process is done and the training loop has begun. You'll see that it outputs information for every training step. Here's a break down of what it means:
+
+Step #1 shows that we're on the first step of the training loop. In this case there are going to be 18,000 steps in total, so you can look at the step number to get an idea of how close it is to finishing.
+
+rate 0.001000 is the learning rate that's controlling the speed of the network's weight updates. Early on this is a comparatively high number (0.001), but for later training cycles it will be reduced 10x, to 0.0001.
+
+accuracy 7.0% is the how many classes were correctly predicted on this training step. This value will often fluctuate a lot, but should increase on average as training progresses. The model outputs an array of numbers, one for each label, and each number is the predicted likelihood of the input being that class. The predicted label is picked by choosing the entry with the highest score. The scores are always between zero and one, with higher values representing more confidence in the result.
+
+cross entropy 2.611571 is the result of the loss function that we're using to guide the training process. This is a score that's obtained by comparing the vector of scores from the current training run to the correct labels, and this should trend downwards during training.
+
+After a hundred steps, you should see a line like this:
+
+```{python}
+I0730 16:54:41.813438 55030 train.py:252] Saving to "/tmp/speech_commands_train/conv.ckpt-100"
+```
+
+This is saving out the current trained weights to a checkpoint file. If your training script gets interrupted, you can look for the last saved checkpoint and then restart the script with --start_checkpoint=/tmp/speech_commands_train/conv.ckpt-100 as a command line argument to start from that point.
+
 ## Confusion Matrix
 
 ```
@@ -41,4 +68,6 @@ This matrix can be more useful than just a single accuracy score because it give
 If we look down the first column though, we see a lot of non-zero values. The column represents all the clips that were predicted to be silence, so positive numbers outside of the first cell are errors. This means that some clips of real spoken words are actually being predicted to be silence, so we do have quite a few false positives.
 
 A perfect model would produce a confusion matrix where all of the entries were zero apart from a diagonal line through the center. Spotting deviations from that pattern can help you figure out how the model is most easily confused, and once you've identified the problems you can address them by adding more data or cleaning up categories.
+
+## Validation
 
