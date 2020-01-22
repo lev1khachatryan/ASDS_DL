@@ -74,7 +74,7 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
     if(summaries_dir!=None):
         train_writer = tf.summary.FileWriter(summaries_dir + '/%s_train' % model_name,
                                          sess.graph)
-        validation_writer = tf.summary.FileWriter(summaries_dir + '/%svalidation' % model_name)
+        validation_writer = tf.summary.FileWriter(summaries_dir + '/%s_validation' % model_name)
     tf.global_variables_initializer().run()
 
     start_step = 1
@@ -109,8 +109,6 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
                 learning_rate_input: learning_rate_value,
                 dropout_prob: dropout,
             }
-        if(model_name=='convlstm'):
-            feed_dict['train_mode:0']=True
         train_summary, train_accuracy, cross_entropy_value, _, _= sess.run(
             [
                 merged_summaries, evaluation_step, cross_entropy_mean, train_step,
@@ -142,8 +140,6 @@ def train(sess, logits, fingerprint_input, ground_truth_input, get_train_data, g
                         ground_truth_input: validation_ground_truth,
                         dropout_prob: 1.0,
                     }
-                if(model_name=='convlstm'):
-                    feed_dict['train_mode:0']=False
                 validation_summary, validation_accuracy, conf_matrix = sess.run(
                     [merged_summaries, evaluation_step, confusion_matrix],
                         feed_dict)
