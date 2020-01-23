@@ -97,10 +97,12 @@ def create_model(fingerprint_input, model_settings, model_architecture,
         return create_crnn_model(fingerprint_input,model_settings,model_size_info,is_training)
     elif model_architecture=='c_rnn_spec':
         return create_crnn_model(fingerprint_input,model_settings,model_size_info,is_training)
+    elif model_architecture == 'convlstm':
+        return create_multilayer_convlstm_model(fingerprint_input, model_settings,is_training)
     else:
         raise Exception('model_architecture argument "' + model_architecture +
                         '" not recognized, should be one of "ds_cnn", "ds_cnn_spec",' +
-                        ' "c_rnn, or "c_rnn_spec"')
+                        ' "c_rnn, "c_rnn_spec" or "convlstm"')
 
 
 def load_variables_from_checkpoint(sess, start_checkpoint):
@@ -113,8 +115,7 @@ def load_variables_from_checkpoint(sess, start_checkpoint):
     saver = tf.train.Saver(tf.global_variables())
     saver.restore(sess, start_checkpoint)
 
-def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,
-                        is_training):
+def create_ds_cnn_model(fingerprint_input, model_settings, model_size_info,is_training):
     """Builds a model with depthwise separable convolutional neural network
     Model definition is based on https://arxiv.org/abs/1704.04861 and
     Tensorflow implementation: https://github.com/Zehaos/MobileNet
@@ -409,3 +410,106 @@ class LayerNormGRUCell(rnn_cell_impl.RNNCell):
         new_h = self._activation(new_c) * math_ops.sigmoid(z) + \
                 (1 - math_ops.sigmoid(z)) * h
         return new_h, new_h
+
+def resCONVLSTM(inputs, model_settings, is_training, name=''):
+    """Creates a Residual ConvLSTM as in https://arxiv.org/abs/1607.06450.
+        1-D Conv on feature, unidirectional rnn
+        
+    """
+    with(tf.variable_scope('resCONVLSTM_%s' % name)):
+        batch_size = tf.shape(inputs)[0]
+        input_frequency_size = model_settings['dct_coefficient_count']
+        input_time_size = model_settings['spectrogram_length']
+        input_shape = [input_frequency_size, 1]
+        conv1 = tf.contrib.rnn.ConvLSTMCell(1, input_shape, 1, [10], name='conv1')
+        conv2 = tf.contrib.rnn.ConvLSTMCell(1, input_shape, 1, [10], name='conv2')
+        # First ConvLSTM
+        initial_conv1 = conv1.zero_state(batch_size, dtype=tf.float32)
+        initial_conv2 = conv2.zero_state(batch_size, dtype=tf.float32)
+        conv1_o, _ = tf.nn.dynamic_rnn(conv1, inputs, initial_state=initial_conv1)
+        bn1 = slim.layers.batch_norm(conv1_o, is_training=is_training,updates_collections=None,decay=0.96,
+                                           zero_debias_moving_mean=True,data_format='NCHW')
+        bn1_relu = tf.nn.relu(bn1)
+        conv2_o, _ = tf.nn.dynamic_rnn(conv2, bn1_relu, initial_state=initial_conv2)
+        bn2 = slim.layers.batch_norm(conv2_o, is_training=is_training,updates_collections=None,decay=0.96,
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+        residual = tf.add(bn2, inputs)
+        output_relu = tf.nn.relu(residual)
+        return output_relu
+
+
+def create_multilayer_convlstm_model(fingerprint_input, model_settings, is_training):
+    """
+        Creates a Multilayer ConvLSTM Model Followed by a linear layer and softmax activation function
+    """
+    
+    if is_training:
+        dropout_prob = tf.placeholder(tf.float32, name='dropout_prob')
+        train_mode_placeholder=tf.placeholder(tf.bool,name='train_mode')
+    else:
+        train_mode_placeholder=False
+    batch_size = tf.shape(fingerprint_input)[0]
+    input_frequency_size = model_settings['dct_coefficient_count']
+    input_time_size = model_settings['spectrogram_length']
+    fingerprint_4d = tf.reshape(fingerprint_input,
+                                [-1, input_time_size, input_frequency_size, 1])
+    
+    # Layer1 resCONVLSTMs
+    resCONVLSTM1 = resCONVLSTM(fingerprint_4d, model_settings, train_mode_placeholder, '1')
+    resCONVLSTM2 = resCONVLSTM(resCONVLSTM1, model_settings, train_mode_placeholder, '2')
+    resCONVLSTM3 = resCONVLSTM(resCONVLSTM2, model_settings, train_mode_placeholder, '3')
+    resCONVLSTM4= resCONVLSTM(resCONVLSTM3,model_settings,train_mode_placeholder,'4')
+    resCONVLSTM4=tf.reshape(resCONVLSTM4,[-1, input_time_size, input_frequency_size])
+    with tf.variable_scope('lstm1'):
+        lstm_cell1=tf.contrib.rnn.LSTMCell(num_units=650,num_proj=input_frequency_size)
+        initial_lstm1=lstm_cell1.zero_state(batch_size,dtype=tf.float32)
+        lstm1_o,_=tf.nn.dynamic_rnn(lstm_cell1,resCONVLSTM4,initial_state=initial_lstm1)
+        lstm1_o=tf.reshape(lstm1_o,[-1, input_time_size, input_frequency_size,1 ])
+        nin1_o=tf.layers.conv2d(lstm1_o,1,[1,1],name='nin1')
+        bn1=slim.layers.batch_norm(nin1_o,is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+        bn1=tf.reshape(bn1,[-1,input_time_size,input_frequency_size])
+    with tf.variable_scope('lstm2'):
+        lstm_cell2=tf.contrib.rnn.LSTMCell(num_units=650,num_proj=input_frequency_size)
+        initial_lstm2=lstm_cell1.zero_state(batch_size,dtype=tf.float32)
+        lstm2_o, _ = tf.nn.dynamic_rnn(lstm_cell2, bn1, initial_state=initial_lstm2)
+        lstm2_o = tf.reshape(lstm2_o, [-1, input_time_size, input_frequency_size, 1])
+        nin2_o = tf.layers.conv2d(lstm2_o, 1, [1, 1], name='nin1')
+        bn2 = slim.layers.batch_norm(nin2_o, is_training=train_mode_placeholder,updates_collections=None,decay=0.96,
+                                          zero_debias_moving_mean=True,activation_fn=tf.nn.relu,data_format='NCHW')
+        bn2=tf.reshape(bn2,[-1,input_time_size,input_frequency_size])
+
+    # LSTM Layer Final
+    with tf.variable_scope('lstm3'):
+        lstm_cell3=tf.contrib.rnn.LSTMCell(num_units=650,num_proj=input_frequency_size)
+        initial_lstm3=lstm_cell1.zero_state(batch_size,dtype=tf.float32)
+        lstm3_o, _ = tf.nn.dynamic_rnn(lstm_cell3, bn2, initial_state=initial_lstm3)
+        lstm3_o = tf.reshape(lstm3_o, [-1, input_time_size, input_frequency_size, 1])
+
+
+    # Final FC for classification
+    reshaped_layer = tf.reshape(lstm3_o,
+                                 [-1, input_time_size * input_frequency_size])
+
+    # Dropout
+    if is_training:
+        reshaped_layer = tf.nn.dropout(reshaped_layer, keep_prob=dropout_prob)
+
+
+    prefinal_dense=tf.nn.relu(tf.layers.dense(reshaped_layer,750))
+
+    if is_training:
+        prefinal_dense=tf.nn.dropout(prefinal_dense,keep_prob=dropout_prob)
+    # Final Layer
+
+    label_count = model_settings['label_count']
+
+    final_fc_weights = tf.Variable(
+        tf.truncated_normal(
+            [750, label_count], stddev=0.01))
+    final_fc_bias = tf.Variable(tf.zeros([label_count]))
+    final_fc = tf.matmul(prefinal_dense, final_fc_weights) + final_fc_bias
+    if is_training:
+        return final_fc, dropout_prob
+    else:
+        return final_fc
