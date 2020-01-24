@@ -130,3 +130,82 @@ This will output information about the number of words correctly matched, how ma
 
 You'll see that the streaming accuracy outputs three numbers, rather than just the one metric used in training. This is because different applications have varying requirements, with some being able to tolerate frequent incorrect results as long as real words are found (high recall), while others very focused on ensuring the predicted labels are highly likely to be correct even if some aren't detected (high precision). The numbers from the tool give you an idea of how your model will perform in an application, and you can try tweaking the signal averaging parameters to tune it to give the kind of performance you want. To understand what the right parameters are for your application, you can look at generating an ROC curve to help you understand the tradeoffs.
 
+## RecognizeCommands
+
+The streaming accuracy tool uses a simple decoder contained in a small C++ class called RecognizeCommands. This class is fed the output of running the TensorFlow model over time, it averages the signals, and returns information about a label when it has enough evidence to think that a recognized word has been found. The implementation is fairly small, just keeping track of the last few predictions and averaging them, so it's easy to port to other platforms and languages as needed. For example, it's convenient to do something similar at the Java level on Android, or Python on the Raspberry Pi. As long as these implementations share the same logic, you can tune the parameters that control the averaging using the streaming test tool, and then transfer them over to your application to get similar results.
+
+## Advanced Training
+
+The defaults for the training script are designed to produce good end to end results in a comparatively small file, but there are a lot of options you can change to customize the results for your own requirements.
+
+## Custom Training Data
+
+By default the script will download the Speech Commands dataset, but you can also supply your own training data. To train on your own data, you should make sure that you have at least several hundred recordings of each sound you would like to recognize, and arrange them into folders by class. For example, if you were trying to recognize dog barks from cat miaows, you would create a root folder called animal_sounds, and then within that two sub-folders called bark and miaow. You would then organize your audio files into the appropriate folders.
+
+To point the script to your new audio files, you'll need to set --data_url= to disable downloading of the Speech Commands dataset, and --data_dir=/your/data/folder/ to find the files you've just created.
+
+The files themselves should be 16-bit little-endian PCM-encoded WAVE format. The sample rate defaults to 16,000, but as long as all your audio is consistently the same rate (the script doesn't support resampling) you can change this with the --sample_rate argument. The clips should also all be roughly the same duration. The default expected duration is one second, but you can set this with the --clip_duration_ms flag. If you have clips with variable amounts of silence at the start, you can look at word alignment tools to standardize them (here's a quick and dirty approach you can use too).
+
+One issue to watch out for is that you may have very similar repetitions of the same sounds in your dataset, and these can give misleading metrics if they're spread across your training, validation, and test sets. For example, the Speech Commands set has people repeating the same word multiple times. Each one of those repetitions is likely to be pretty close to the others, so if training was overfitting and memorizing one, it could perform unrealistically well when it saw a very similar copy in the test set. To avoid this danger, Speech Commands tries to ensure that all clips featuring the same word spoken by a single person are put into the same partition. Clips are assigned to training, test, or validation sets based on a hash of their filename, to ensure that the assignments remain steady even as new clips are added and avoid any training samples migrating into the other sets. To make sure that all a given speaker's words are in the same bucket, the hashing function ignores anything in a filename after 'nohash' when calculating the assignments. This means that if you have file names like pete_nohash_0.wav and pete_nohash_1.wav, they're guaranteed to be in the same set.
+
+## Unknown Class
+It's likely that your application will hear sounds that aren't in your training set, and you'll want the model to indicate that it doesn't recognize the noise in those cases. To help the network learn what sounds to ignore, you need to provide some clips of audio that are neither of your classes. To do this, you'd create quack, oink, and moo subfolders and populate them with noises from other animals your users might encounter. The --wanted_words argument to the script defines which classes you care about, all the others mentioned in subfolder names will be used to populate an _unknown_ class during training. The Speech Commands dataset has twenty words in its unknown classes, including the digits zero through nine and random names like "Sheila".
+
+By default 10% of the training examples are picked from the unknown classes, but you can control this with the --unknown_percentage flag. Increasing this will make the model less likely to mistake unknown words for wanted ones, but making it too large can backfire as the model might decide it's safest to categorize all words as unknown!
+
+## Background Noise
+
+Real applications have to recognize audio even when there are other irrelevant sounds happening in the environment. To build a model that's robust to this kind of interference, we need to train against recorded audio with similar properties. The files in the Speech Commands dataset were captured on a variety of devices by users in many different environments, not in a studio, so that helps add some realism to the training. To add even more, you can mix in random segments of environmental audio to the training inputs. In the Speech Commands set there's a special folder called _background_noise_ which contains minute-long WAVE files with white noise and recordings of machinery and everyday household activity.
+
+Small snippets of these files are chosen at random and mixed at a low volume into clips during training. The loudness is also chosen randomly, and controlled by the --background_volume argument as a proportion where 0 is silence, and 1 is full volume. Not all clips have background added, so the --background_frequency flag controls what proportion have them mixed in.
+
+Your own application might operate in its own environment with different background noise patterns than these defaults, so you can supply your own audio clips in the _background_noise_ folder. These should be the same sample rate as your main dataset, but much longer in duration so that a good set of random segments can be selected from them.
+
+## Silence
+In most cases the sounds you care about will be intermittent and so it's important to know when there's no matching audio. To support this, there's a special _silence_ label that indicates when the model detects nothing interesting. Because there's never complete silence in real environments, we actually have to supply examples with quiet and irrelevant audio. For this, we reuse the _background_noise_ folder that's also mixed in to real clips, pulling short sections of the audio data and feeding those in with the ground truth class of _silence_. By default 10% of the training data is supplied like this, but the --silence_percentage can be used to control the proportion. As with unknown words, setting this higher can weight the model results in favor of true positives for silence, at the expense of false negatives for words, but too large a proportion can cause it to fall into the trap of always guessing silence.
+
+## Time Shifting
+
+Adding in background noise is one way of distorting the training data in a realistic way to effectively increase the size of the dataset, and so increase overall accuracy, and time shifting is another. This involves a random offset in time of the training sample data, so that a small part of the start or end is cut off and the opposite section is padded with zeroes. This mimics the natural variations in starting time in the training data, and is controlled with the --time_shift_ms flag, which defaults to 100ms. Increasing this value will provide more variation, but at the risk of cutting off important parts of the audio. A related way of augmenting the data with realistic distortions is by using time stretching and pitch scaling, but that's outside the scope of this tutorial.
+
+## Customizing the Model
+
+The default model used for this script is pretty large, taking over 800 million FLOPs for each inference and using 940,000 weight parameters. This runs at usable speeds on desktop machines or modern phones, but it involves too many calculations to run at interactive speeds on devices with more limited resources. To support these use cases, there's a couple of alternatives available:
+
+low_latency_conv Based on the 'cnn-one-fstride4' topology described in the Convolutional Neural Networks for Small-footprint Keyword Spotting paper. The accuracy is slightly lower than 'conv' but the number of weight parameters is about the same, and it only needs 11 million FLOPs to run one prediction, making it much faster.
+
+To use this model, you specify --model_architecture=low_latency_conv on the command line. You'll also need to update the training rates and the number of steps, so the full command will look like:
+
+```{python}
+python src/libs/train \
+--model_architecture=low_latency_conv \
+--how_many_training_steps=20000,6000 \
+--learning_rate=0.01,0.001
+```
+
+This asks the script to train with a learning rate of 0.01 for 20,000 steps, and then do a fine-tuning pass of 6,000 steps with a 10x smaller rate.
+
+***low_latency_svdf*** Based on the topology presented in the Compressing Deep Neural Networks using a Rank-Constrained Topology paper. The accuracy is also lower than 'conv' but it only uses about 750 thousand parameters, and most significantly, it allows for an optimized execution at test time (i.e. when you will actually use it in your application), resulting in 750 thousand FLOPs.
+
+To use this model, you specify --model_architecture=low_latency_svdf on the command line, and update the training rates and the number of steps, so the full command will look like:
+
+```{python}
+python src/libs/train \
+--model_architecture=low_latency_svdf \
+--how_many_training_steps=100000,35000 \
+--learning_rate=0.01,0.005
+```
+
+ote that despite requiring a larger number of steps than the previous two topologies, the reduced number of computations means that training should take about the same time, and at the end reach an accuracy of around 85%. You can also further tune the topology fairly easily for computation and accuracy by changing these parameters in the SVDF layer:
+
+* rank - The rank of the approximation (higher typically better, but results in more computation).
+
+* num_units - Similar to other layer types, specifies the number of nodes in the layer (more nodes better quality, and more computation).
+
+Regarding runtime, since the layer allows optimizations by caching some of the internal neural network activations, you need to make sure to use a consistent stride (e.g. 'clip_stride_ms' flag) both when you freeze the graph, and when executing the model in streaming mode (e.g. test_streaming_accuracy.cc).
+
+Other parameters to customize If you want to experiment with customizing models, a good place to start is by tweaking the spectrogram creation parameters. This has the effect of altering the size of the input image to the model, and the creation code in models.py will adjust the number of computations and weights automatically to fit with different dimensions. If you make the input smaller, the model will need fewer computations to process it, so it can be a great way to trade off some accuracy for improved latency. The --window_stride_ms controls how far apart each frequency analysis sample is from the previous. If you increase this value, then fewer samples will be taken for a given duration, and the time axis of the input will shrink. The --dct_coefficient_count flag controls how many buckets are used for the frequency counting, so reducing this will shrink the input in the other dimension. The --window_size_ms argument doesn't affect the size, but does control how wide the area used to calculate the frequencies is for each sample. Reducing the duration of the training samples, controlled by --clip_duration_ms, can also help if the sounds you're looking for are short, since that also reduces the time dimension of the input. You'll need to make sure that all your training data contains the right audio in the initial portion of the clip though.
+
+If you have an entirely different model in mind for your problem, you may find that you can plug it into models.py and have the rest of the script handle all of the preprocessing and training mechanics. You would add a new clause to create_model, looking for the name of your architecture and then calling a model creation function. This function is given the size of the spectrogram input, along with other model information, and is expected to create TensorFlow ops to read that in and produce an output prediction vector, and a placeholder to control the dropout rate. The rest of the script will handle integrating this model into a larger graph doing the input calculations and applying softmax and a loss function to train it.
+
+One common problem when you're adjusting models and training hyper-parameters is that not-a-number values can creep in, thanks to numerical precision issues. In general you can solve these by reducing the magnitude of things like learning rates and weight initialization functions, but if they're persistent you can enable the --check_nans flag to track down the source of the errors. This will insert check ops between most regular operations in TensorFlow, and abort the training process with a useful error message when they're encountered.
